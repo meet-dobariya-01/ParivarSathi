@@ -14,6 +14,18 @@ The platform helps:
 
 Detailed system diagrams and data model views are available in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
+### System overview
+
+![ParivarSathi system architecture](docs/diagrams/system-architecture.svg)
+
+### Request flow
+
+![Citizen request flow](docs/diagrams/request-flow.svg)
+
+### Data model
+
+![ParivarSathi ER diagram](docs/diagrams/data-model.svg)
+
 ## Key Features
 
 - Family and member registration

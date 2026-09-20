@@ -1,0 +1,75 @@
+flowchart TB
+  subgraph Users["Users / Roles"]
+    U1["Citizen"]
+    U2["Officer / Admin"]
+  end
+
+  subgraph Frontend["Frontend Layer"]
+    FE["React 18 + Vite\nReact Router + Tailwind\nreact-i18next (EN / GU / HI)\nRecharts + axios"]
+  end
+
+  subgraph API["API Layer"]
+    GW["Express REST API\nJWT Auth\nValidation\nRate Limiting\nError Handling"]
+  end
+
+  subgraph Modules["Backend Modules"]
+    M1["Auth & Role Module"]
+    M2["Family Registry"]
+    M3["Eligibility Engine"]
+    M4["Duplicate & Fraud Detection"]
+    M5["Application Tracking"]
+    M6["Admin Analytics"]
+  end
+
+  subgraph Data["Data Layer"]
+    DB["MongoDB Atlas\nMongoose Models"]
+  end
+
+  subgraph Security["Security & Compliance"]
+    SEC["HTTPS\nJWT\nPassword Hashing\nID Hashing + Salt\nRBAC\nInput Validation\nAudit Logging\nData Minimization"]
+  end
+
+  subgraph External["External / Future Integrations"]
+    EX1["Aadhaar Verification\n(masked/hash only)"]
+    EX2["DigiLocker"]
+    EX3["Existing Scheme DB APIs"]
+    EX4["SMS / Email Notifications"]
+  end
+
+  U1 --> FE
+  U2 --> FE
+  FE --> GW
+  GW --> M1
+  GW --> M2
+  GW --> M3
+  GW --> M4
+  GW --> M5
+  GW --> M6
+
+  M1 --> DB
+  M2 --> DB
+  M3 --> DB
+  M4 --> DB
+  M5 --> DB
+  M6 --> DB
+
+  SEC -. protects .-> FE
+  SEC -. protects .-> GW
+  SEC -. protects .-> DB
+
+  EX1 -. future .-> GW
+  EX2 -. future .-> GW
+  EX3 -. future .-> GW
+  EX4 -. future .-> GW
+
+  classDef frontend fill:#0B1F3A,stroke:#0B1F3A,color:#ffffff,stroke-width:1.5px;
+  classDef backend fill:#D97706,stroke:#B45309,color:#ffffff,stroke-width:1.5px;
+  classDef db fill:#15803D,stroke:#166534,color:#ffffff,stroke-width:1.5px;
+  classDef sec fill:#4B5563,stroke:#374151,color:#ffffff,stroke-width:1.5px;
+  classDef ext fill:#9CA3AF,stroke:#6B7280,color:#111827,stroke-width:1.5px,stroke-dasharray: 5 5;
+
+  class U1,U2,FE frontend;
+  class GW,M1,M2,M3,M4,M5,M6 backend;
+  class DB db;
+  class SEC sec;
+  class EX1,EX2,EX3,EX4 ext;

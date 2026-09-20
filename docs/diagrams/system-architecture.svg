@@ -1,0 +1,95 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1500" height="900" viewBox="0 0 1500 900">
+  <defs>
+    <marker id="arrow" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto">
+      <path d="M0,0 L12,6 L0,12 Z" fill="#3b82f6"/>
+    </marker>
+    <style>
+      .title { font: 700 24px Arial, sans-serif; fill: #111827; }
+      .sub { font: 600 18px Arial, sans-serif; fill: #0f172a; }
+      .node { font: 600 15px Arial, sans-serif; fill: #111827; }
+      .small { font: 500 13px Arial, sans-serif; fill: #374151; }
+      .box { stroke: #cbd5e1; stroke-width: 1.5; fill: #ffffff; rx: 14; }
+      .front { fill: #eff6ff; stroke: #93c5fd; }
+      .api { fill: #fff7ed; stroke: #fdba74; }
+      .mod { fill: #fef3c7; stroke: #fbbf24; }
+      .db { fill: #ecfdf5; stroke: #86efac; }
+      .sec { fill: #f3f4f6; stroke: #9ca3af; }
+      .ext { fill: #f9fafb; stroke: #d1d5db; stroke-dasharray: 8 6; }
+      .line { stroke: #3b82f6; stroke-width: 2.5; fill: none; marker-end: url(#arrow); }
+      .dotted { stroke: #64748b; stroke-width: 2; fill: none; stroke-dasharray: 8 6; marker-end: url(#arrow); }
+    </style>
+  </defs>
+
+  <text x="30" y="45" class="title">ParivarSathi System Architecture</text>
+
+  <rect x="45" y="80" width="260" height="180" class="box front"/>
+  <text x="65" y="110" class="sub">Users / Roles</text>
+  <rect x="70" y="130" width="110" height="60" class="box" fill="#dbeafe" stroke="#60a5fa"/>
+  <text x="96" y="168" class="node">Citizen</text>
+  <rect x="195" y="130" width="90" height="60" class="box" fill="#e0f2fe" stroke="#38bdf8"/>
+  <text x="214" y="168" class="node">Officer</text>
+
+  <rect x="330" y="80" width="310" height="180" class="box front"/>
+  <text x="350" y="110" class="sub">Frontend Layer</text>
+  <rect x="360" y="130" width="250" height="100" class="box" fill="#dbeafe" stroke="#93c5fd"/>
+  <text x="390" y="160" class="node">React 18 + Vite</text>
+  <text x="390" y="184" class="small">React Router + Tailwind</text>
+  <text x="390" y="206" class="small">react-i18next (EN / GU / HI)</text>
+
+  <rect x="675" y="80" width="350" height="180" class="box api"/>
+  <text x="695" y="110" class="sub">API Layer</text>
+  <rect x="705" y="130" width="290" height="110" class="box" fill="#ffedd5" stroke="#fdba74"/>
+  <text x="730" y="165" class="node">Express REST API</text>
+  <text x="730" y="189" class="small">JWT Auth • Validation • Rate Limiting</text>
+  <text x="730" y="211" class="small">Error Handling</text>
+
+  <rect x="1060" y="80" width="390" height="260" class="box mod"/>
+  <text x="1080" y="110" class="sub">Backend Modules</text>
+  <rect x="1085" y="135" width="150" height="48" class="box" fill="#fef3c7" stroke="#fbbf24"/>
+  <text x="1112" y="164" class="small">Auth &amp; Role</text>
+  <rect x="1245" y="135" width="170" height="48" class="box" fill="#fef3c7" stroke="#fbbf24"/>
+  <text x="1275" y="164" class="small">Family Registry</text>
+  <rect x="1085" y="196" width="150" height="48" class="box" fill="#fef3c7" stroke="#fbbf24"/>
+  <text x="1117" y="225" class="small">Eligibility</text>
+  <rect x="1245" y="196" width="170" height="48" class="box" fill="#fef3c7" stroke="#fbbf24"/>
+  <text x="1270" y="225" class="small">Fraud Detection</text>
+  <rect x="1085" y="257" width="150" height="48" class="box" fill="#fef3c7" stroke="#fbbf24"/>
+  <text x="1118" y="286" class="small">Applications</text>
+  <rect x="1245" y="257" width="170" height="48" class="box" fill="#fef3c7" stroke="#fbbf24"/>
+  <text x="1288" y="286" class="small">Analytics</text>
+
+  <rect x="700" y="340" width="520" height="220" class="box db"/>
+  <text x="720" y="372" class="sub">Data Layer</text>
+  <rect x="860" y="400" width="180" height="90" class="box" fill="#dcfce7" stroke="#4ade80"/>
+  <text x="898" y="450" class="node">MongoDB Atlas</text>
+  <text x="872" y="473" class="small">Mongoose Models</text>
+
+  <rect x="105" y="350" width="430" height="210" class="box sec"/>
+  <text x="132" y="382" class="sub">Security &amp; Compliance</text>
+  <text x="132" y="420" class="small">HTTPS • JWT • Password Hashing</text>
+  <text x="132" y="447" class="small">ID Hashing + Salt • RBAC</text>
+  <text x="132" y="474" class="small">Input Validation • Audit Logging</text>
+  <text x="132" y="501" class="small">Data Minimization</text>
+
+  <rect x="40" y="620" width="1320" height="200" class="box ext"/>
+  <text x="65" y="650" class="sub">External / Future Integrations</text>
+  <rect x="80" y="680" width="260" height="90" class="box" fill="#f5f5f5" stroke="#cbd5e1"/>
+  <text x="116" y="722" class="node">Aadhaar Verification</text>
+  <text x="166" y="744" class="small">masked / hash only</text>
+  <rect x="380" y="680" width="220" height="90" class="box" fill="#f5f5f5" stroke="#cbd5e1"/>
+  <text x="447" y="728" class="node">DigiLocker</text>
+  <rect x="645" y="680" width="270" height="90" class="box" fill="#f5f5f5" stroke="#cbd5e1"/>
+  <text x="706" y="722" class="node">Existing Scheme DB APIs</text>
+  <rect x="960" y="680" width="310" height="90" class="box" fill="#f5f5f5" stroke="#cbd5e1"/>
+  <text x="1012" y="722" class="node">SMS / Email Notifications</text>
+
+  <path d="M305 170 L330 170" class="line"/>
+  <path d="M640 170 L675 170" class="line"/>
+  <path d="M1025 170 L1060 170" class="line"/>
+  <path d="M1180 345 L1180 400" class="line"/>
+  <path d="M540 350 L700 350" class="line"/>
+  <path d="M530 395 L105 395" class="dotted"/>
+  <path d="M430 610 L430 680" class="dotted"/>
+  <path d="M830 610 L830 680" class="dotted"/>
+  <path d="M1170 610 L1170 680" class="dotted"/>
+</svg>
