@@ -11,6 +11,7 @@ import Card from '../components/common/Card';
 import Button from '../components/common/Button';
 import Input from '../components/common/Input';
 import Select from '../components/common/Select';
+import api from '../api/client';
 import { UserPlus, Shield, Check } from 'lucide-react';
 
 const registerSchema = z.object({
@@ -56,21 +57,28 @@ const Register = () => {
     setLoading(true);
 
     try {
-      // Call AuthContext register or api.post('/auth/register')
-      const res = await api.post('/auth/register', data);
-      localStorage.setItem('parivar_token', res.data.token);
+      const payload = {
+        ...data,
+        email: String(data.email || '').trim().toLowerCase(),
+        mobile: String(data.mobile || '').trim(),
+        aadhar_last_4: String(data.aadhar_last_4 || '').trim()
+      };
 
+      const res = await registerUser(payload);
       showToast({
         type: 'success',
         title: 'Registration Successful',
         message: 'Your citizen account has been created.'
       });
 
-      // Reload or navigate to dashboard
-      window.location.href = '/dashboard';
+      if (res.role === 'OFFICER') {
+        navigate('/officer/dashboard');
+      } else {
+        navigate('/dashboard');
+      }
     } catch (err) {
       console.error('Registration error:', err);
-      const msg = err.response?.data?.message || 'Registration failed. Please check inputs.';
+      const msg = err.response?.data?.message || 'Unable to reach the server. Please try again.';
       setServerError(msg);
       showToast({
         type: 'error',

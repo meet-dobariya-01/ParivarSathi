@@ -1,0 +1,21 @@
+sequenceDiagram
+  actor Citizen
+  participant UI as React Frontend
+  participant API as Express API
+  participant Auth as Auth Middleware
+  participant Engine as Eligibility Engine
+  participant DB as MongoDB
+  participant View as Benefits UI
+
+  Citizen->>UI: Clicks Find Benefits
+  UI->>API: GET /api/eligibility/family?familyId=...
+  API->>Auth: Validate JWT + Role
+  Auth-->>API: Authorized Citizen
+  API->>Engine: Evaluate family/member eligibility
+  Engine->>DB: Read Family, Members, Schemes, Applications
+  DB-->>Engine: Household + policy + enrollment data
+  Engine->>Engine: Match rules, detect missed/enrolled
+  Engine-->>API: eligible + enrolled + missed schemes
+  API-->>UI: JSON response
+  UI->>View: Render eligible vs missed results
+  View-->>Citizen: Show scheme recommendations

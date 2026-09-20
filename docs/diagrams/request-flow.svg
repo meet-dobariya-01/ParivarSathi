@@ -1,0 +1,71 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="700" viewBox="0 0 1400 700">
+  <defs>
+    <marker id="arrow" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto">
+      <path d="M0,0 L12,6 L0,12 Z" fill="#2563eb"/>
+    </marker>
+    <style>
+      .title { font: 700 24px Arial, sans-serif; fill: #111827; }
+      .label { font: 600 15px Arial, sans-serif; fill: #111827; }
+      .small { font: 500 13px Arial, sans-serif; fill: #374151; }
+      .box { fill: #ffffff; stroke: #cbd5e1; stroke-width: 1.5; rx: 16; }
+      .primary { fill: #e0f2fe; stroke: #7dd3fc; }
+      .api { fill: #fff7ed; stroke: #fdba74; }
+      .db { fill: #ecfdf5; stroke: #86efac; }
+      .text { fill: #111827; }
+      .line { stroke: #2563eb; stroke-width: 2.2; fill: none; marker-end: url(#arrow); }
+      .dashed { stroke: #64748b; stroke-width: 2; fill: none; stroke-dasharray: 8 7; marker-end: url(#arrow); }
+    </style>
+  </defs>
+
+  <text x="40" y="42" class="title">Request Flow: Citizen clicks Find Benefits</text>
+
+  <rect x="45" y="120" width="160" height="80" class="box primary"/>
+  <text x="92" y="155" class="label">Citizen</text>
+
+  <rect x="270" y="90" width="180" height="110" class="box primary"/>
+  <text x="305" y="125" class="label">React Frontend</text>
+  <text x="290" y="150" class="small">Navigates to</text>
+  <text x="290" y="170" class="small">Find Benefits</text>
+
+  <rect x="520" y="90" width="180" height="110" class="box api"/>
+  <text x="560" y="125" class="label">Express API</text>
+  <text x="538" y="150" class="small">GET /api/eligibility</text>
+  <text x="545" y="170" class="small">family=...</text>
+
+  <rect x="770" y="90" width="180" height="110" class="box api"/>
+  <text x="805" y="125" class="label">Auth</text>
+  <text x="805" y="150" class="small">Validate JWT</text>
+  <text x="804" y="170" class="small">+ Role</text>
+
+  <rect x="1005" y="90" width="180" height="110" class="box api"/>
+  <text x="1035" y="125" class="label">Eligibility Engine</text>
+  <text x="1032" y="150" class="small">Match rules</text>
+  <text x="1034" y="170" class="small">compute results</text>
+
+  <rect x="545" y="315" width="180" height="110" class="box db"/>
+  <text x="595" y="350" class="label">MongoDB</text>
+  <text x="570" y="375" class="small">Family, Members,</text>
+  <text x="560" y="395" class="small">Schemes, Applications</text>
+
+  <rect x="1000" y="315" width="205" height="110" class="box primary"/>
+  <text x="1040" y="350" class="label">Benefits UI</text>
+  <text x="1028" y="375" class="small">Render eligible</text>
+  <text x="1028" y="395" class="small">vs missed schemes</text>
+
+  <path d="M205 160 L270 160" class="line"/>
+  <path d="M450 160 L520 160" class="line"/>
+  <path d="M700 160 L770 160" class="line"/>
+  <path d="M950 160 L1005 160" class="line"/>
+  <path d="M1095 200 L1095 315" class="line"/>
+  <path d="M725 370 L1000 370" class="line"/>
+  <path d="M1095 425 L1095 540 L148 540 L148 200" class="dashed"/>
+  <path d="M1185 425 L1185 540 L1120 540" class="line"/>
+
+  <text x="220" y="150" class="small">Clicks</text>
+  <text x="462" y="150" class="small">Request</text>
+  <text x="714" y="150" class="small">Authorize</text>
+  <text x="958" y="150" class="small">Evaluate</text>
+  <text x="1030" y="300" class="small">Response</text>
+  <text x="790" y="356" class="small">Read data</text>
+  <text x="1020" y="560" class="small">Show results</text>
+</svg>

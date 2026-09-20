@@ -10,28 +10,45 @@ const generateToken = (id) => {
 
 const registerUser = async (req, res) => {
   try {
-    const { name, email, password, role, date_of_birth, gender, mobile, occupation, education } = req.body;
+    const {
+      name,
+      email,
+      password,
+      role,
+      date_of_birth,
+      gender,
+      mobile,
+      occupation,
+      education,
+      aadhar_last_4,
+    } = req.body;
 
-    const userExists = await User.findOne({ email });
+    const normalizedEmail = String(email || '').trim().toLowerCase();
+
+    if (!normalizedEmail || !password) {
+      return res.status(400).json({ message: 'Email and password are required.' });
+    }
+
+    const userExists = await User.findOne({ email: normalizedEmail });
     if (userExists) {
       return res.status(400).json({ message: 'User already exists with this email' });
     }
 
     const assignedRole = (role && role.toUpperCase() === 'OFFICER') ? 'OFFICER' : 'CITIZEN';
 
-    // Create associated person record
     const person = await Person.create({
       name: name || 'Citizen User',
       date_of_birth: date_of_birth ? new Date(date_of_birth) : new Date('1995-01-01'),
       gender: gender || 'Male',
       mobile: mobile || '',
       occupation: occupation || '',
-      education: education || ''
+      education: education || '',
+      aadhar_last_4: aadhar_last_4 || ''
     });
 
     const user = await User.create({
-      email,
-      password_hash: password, // Mongoose pre-save hook will hash password_hash
+      email: normalizedEmail,
+      password_hash: password,
       role: assignedRole,
       person_id: person._id,
       is_active: true
@@ -45,7 +62,8 @@ const registerUser = async (req, res) => {
         _id: person._id,
         name: person.name,
         gender: person.gender,
-        date_of_birth: person.date_of_birth
+        date_of_birth: person.date_of_birth,
+        aadhar_last_4: person.aadhar_last_4 || ''
       },
       token: generateToken(user._id),
     });

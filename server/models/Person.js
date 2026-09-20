@@ -7,6 +7,7 @@ const PersonSchema = new mongoose.Schema({
   mobile: { type: String },
   occupation: { type: String },
   education: { type: String },
+  aadhar_last_4: { type: String, default: '' },
 }, { timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' } });
 
 module.exports = mongoose.model('Person', PersonSchema);

@@ -1,0 +1,99 @@
+erDiagram
+  USER ||--o{ FAMILY : manages
+  USER ||--o{ APPLICATION : reviews
+  USER ||--o{ AUDITLOG : performs
+
+  FAMILY ||--o{ MEMBER : contains
+  FAMILY ||--o{ APPLICATION : has
+  FAMILY ||--o{ DUPLICATEFLAG : flagged_by
+  FAMILY ||--o{ AUDITLOG : logs
+
+  MEMBER ||--o{ APPLICATION : applies_for
+  MEMBER ||--o{ AUDITLOG : logs
+
+  SCHEME ||--o{ APPLICATION : matches
+  SCHEME ||--o{ AUDITLOG : logs
+
+  USER {
+    ObjectId id
+    string name
+    string email
+    string passwordHash
+    string role
+    string phone
+    date createdAt
+  }
+
+  FAMILY {
+    ObjectId id
+    string familyId
+    string district
+    string taluka
+    string village
+    string address
+    number annualIncome
+    ObjectId headMemberId
+    boolean isActive
+    date createdAt
+  }
+
+  MEMBER {
+    ObjectId id
+    ObjectId familyId
+    ObjectId userId
+    string name
+    date dob
+    string gender
+    string relationship
+    string occupation
+    string education
+    boolean isHead
+    boolean isActive
+  }
+
+  SCHEME {
+    ObjectId id
+    string schemeCode
+    string name
+    string department
+    string category
+    string status
+    json eligibilityRules
+    date createdAt
+  }
+
+  APPLICATION {
+    ObjectId id
+    ObjectId familyId
+    ObjectId memberId
+    ObjectId schemeId
+    ObjectId applicantUserId
+    ObjectId reviewerUserId
+    string status
+    string stage
+    string remarks
+    date appliedAt
+    date updatedAt
+  }
+
+  DUPLICATEFLAG {
+    ObjectId id
+    ObjectId familyId
+    ObjectId memberId
+    string reason
+    string matchType
+    number similarityScore
+    boolean resolved
+    date createdAt
+  }
+
+  AUDITLOG {
+    ObjectId id
+    ObjectId userId
+    ObjectId familyId
+    ObjectId memberId
+    ObjectId applicationId
+    string action
+    string details
+    date createdAt
+  }
