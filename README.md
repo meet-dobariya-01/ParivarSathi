@@ -1,7 +1,6 @@
 # ParivarSathi (પરિવાર સાથી) 🏛️
 ### *Unified Family ID Beneficiary Platform for Gujarat*
-
-> **Hackathon MVP Solution** for *"Introduction of Family ID in Gujarat to improve beneficiary management for various government schemes."*
+ 
 
 ---
 
