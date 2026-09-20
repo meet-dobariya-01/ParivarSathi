@@ -10,6 +10,10 @@ The platform helps:
 - apply for benefits and monitor application status
 - officers review applications and manage scheme workflows
 
+## Architecture
+
+Detailed system diagrams and data model views are available in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+
 ## Key Features
 
 - Family and member registration
