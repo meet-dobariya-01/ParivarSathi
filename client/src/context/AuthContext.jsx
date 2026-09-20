@@ -35,13 +35,20 @@ export const AuthProvider = ({ children }) => {
     return data;
   };
 
+  const register = async (payload) => {
+    const { data } = await api.post('/auth/register', payload);
+    localStorage.setItem('parivar_token', data.token);
+    setUser(data);
+    return data;
+  };
+
   const logout = () => {
     localStorage.removeItem('parivar_token');
     setUser(null);
   };
 
   return (
-    <AuthContext.Provider value={{ user, setUser, login, logout, loading }}>
+    <AuthContext.Provider value={{ user, setUser, login, register, logout, loading }}>
       {children}
     </AuthContext.Provider>
   );
