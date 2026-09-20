@@ -1,7 +1,11 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
-import Navbar from './components/Navbar';
+import { ThemeProvider } from './context/ThemeContext';
+import { ToastProvider } from './context/ToastContext';
+
+// Pages
+import LandingPage from './pages/LandingPage';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import CitizenDashboard from './pages/CitizenDashboard';
@@ -10,12 +14,21 @@ import CitizenApplications from './pages/CitizenApplications';
 import OfficerDashboard from './pages/OfficerDashboard';
 import OfficerApplications from './pages/OfficerApplications';
 import OfficerSchemes from './pages/OfficerSchemes';
+import FAQPage from './pages/FAQPage';
+import GrievancePage from './pages/GrievancePage';
 
 const ProtectedRoute = ({ children, allowedRoles }) => {
   const { user, loading } = useAuth();
 
   if (loading) {
-    return <div style={{ textAlign: 'center', padding: '100px', color: 'var(--text-muted)' }}>Loading...</div>;
+    return (
+      <div className="min-h-screen flex items-center justify-center text-gov-navy text-sm font-semibold">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-8 h-8 border-4 border-gov-navy border-t-gov-saffron rounded-full animate-spin"></div>
+          <span>Verifying credentials...</span>
+        </div>
+      </div>
+    );
   }
 
   if (!user) {
@@ -29,39 +42,27 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
   return children;
 };
 
-const RootRedirect = () => {
-  const { user, loading } = useAuth();
-  if (loading) return null;
-  if (!user) return <Navigate to="/login" replace />;
-  return <Navigate to={user.role === 'OFFICER' ? '/officer/dashboard' : '/dashboard'} replace />;
-};
-
 function App() {
   return (
-    <AuthProvider>
-      <Router>
-        <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
-          <Navbar />
-          <main style={{ flex: 1 }}>
+    <ThemeProvider>
+      <ToastProvider>
+        <AuthProvider>
+          <Router>
             <Routes>
-              {/* Public Routes */}
+              {/* Public Citizen & Portal Routes */}
+              <Route path="/" element={<LandingPage />} />
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
+              <Route path="/find-schemes" element={<FindSchemes />} />
+              <Route path="/faq" element={<FAQPage />} />
+              <Route path="/grievance" element={<GrievancePage />} />
 
-              {/* Citizen Routes */}
+              {/* Citizen Authenticated Routes */}
               <Route
                 path="/dashboard"
                 element={
                   <ProtectedRoute allowedRoles={['CITIZEN']}>
                     <CitizenDashboard />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/find-schemes"
-                element={
-                  <ProtectedRoute allowedRoles={['CITIZEN']}>
-                    <FindSchemes />
                   </ProtectedRoute>
                 }
               />
@@ -74,7 +75,7 @@ function App() {
                 }
               />
 
-              {/* Officer Routes */}
+              {/* Officer Authenticated Routes */}
               <Route
                 path="/officer/dashboard"
                 element={
@@ -100,14 +101,13 @@ function App() {
                 }
               />
 
-              {/* Default Redirect */}
-              <Route path="/" element={<RootRedirect />} />
+              {/* Default Fallback */}
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
-          </main>
-        </div>
-      </Router>
-    </AuthProvider>
+          </Router>
+        </AuthProvider>
+      </ToastProvider>
+    </ThemeProvider>
   );
 }
 
