@@ -1,6 +1,6 @@
-# ParivarSathi
+# ParivarSathi (પરિવાર સાથી) 🏛️
+### *Unified Family ID Beneficiary Platform for Gujarat*
 
-ParivarSathi is a Gujarat welfare portal designed to simplify family-based benefit discovery and application tracking for citizens and officers.
 
 ## Overview
 
