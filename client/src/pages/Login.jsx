@@ -1,174 +1,153 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
-import { Shield, ArrowRight, UserCheck, ShieldAlert } from 'lucide-react';
+import { useToast } from '../context/ToastContext';
+import PortalLayout from '../components/layout/PortalLayout';
+import Card from '../components/common/Card';
+import Button from '../components/common/Button';
+import Input from '../components/common/Input';
+import Badge from '../components/common/Badge';
+import { Lock, Mail, Shield, UserCheck, ArrowRight } from 'lucide-react';
 
 const Login = () => {
+  const { t } = useTranslation();
   const { login } = useAuth();
+  const { showToast } = useToast();
   const navigate = useNavigate();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
     setLoading(true);
+
     try {
       const user = await login(email, password);
+      showToast({
+        type: 'success',
+        title: 'Authentication Successful',
+        message: `Welcome back, ${user.person?.name || user.name || 'User'}`
+      });
+
       if (user.role === 'OFFICER') {
         navigate('/officer/dashboard');
       } else {
         navigate('/dashboard');
       }
     } catch (err) {
-      setError(err.response?.data?.message || 'Invalid email or password');
+      console.error('Login error:', err);
+      const msg = err.response?.data?.message || 'Invalid email or password. Please verify credentials.';
+      setError(msg);
+      showToast({
+        type: 'error',
+        title: 'Login Failed',
+        message: msg
+      });
     } finally {
       setLoading(false);
     }
   };
 
-  const handleQuickLogin = async (demoEmail, demoPassword) => {
+  const handleDemoLogin = (demoEmail, demoPassword) => {
     setEmail(demoEmail);
     setPassword(demoPassword);
-    setLoading(true);
-    try {
-      const user = await login(demoEmail, demoPassword);
-      if (user.role === 'OFFICER') {
-        navigate('/officer/dashboard');
-      } else {
-        navigate('/dashboard');
-      }
-    } catch (err) {
-      setError(err.response?.data?.message || 'Login failed');
-    } finally {
-      setLoading(false);
-    }
   };
 
+  const demoAccounts = [
+    { role: 'OFFICER', name: 'Officer Chauhan', email: 'officer@gujarat.gov.in', note: 'Admin/Reviewer' },
+    { role: 'CITIZEN', name: 'Rajesh Patel', email: 'rajesh.patel@gmail.com', note: 'Farmer ₹1.8L' },
+    { role: 'CITIZEN', name: 'Meena Shah', email: 'meena.shah@gmail.com', note: 'Women-Head ₹2.4L' },
+    { role: 'CITIZEN', name: 'Hiren Rabari', email: 'hiren.rabari@gmail.com', note: 'Farmer ₹2.2L' }
+  ];
+
   return (
-    <div style={{ minHeight: '85vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px' }}>
-      <div style={{ width: '100%', maxWidth: '460px' }}>
-        {/* Brand */}
-        <div style={{ textAlign: 'center', marginBottom: '28px' }}>
-          <div style={{
-            width: '52px',
-            height: '52px',
-            borderRadius: '14px',
-            background: 'linear-gradient(135deg, #10b981 0%, #06b6d4 100%)',
-            display: 'inline-flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            color: '#fff',
-            boxShadow: '0 0 20px rgba(16, 185, 129, 0.4)',
-            marginBottom: '12px'
-          }}>
-            <Shield size={28} />
-          </div>
-          <h1 style={{ fontSize: '1.9rem', color: '#fff' }}>ParivarSathi</h1>
-          <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginTop: '4px' }}>
-            Unified Gujarat Family Beneficiary Platform
-          </p>
-        </div>
-
-        {/* Login Box */}
-        <div className="glass-panel" style={{ padding: '32px' }}>
-          <h2 style={{ fontSize: '1.3rem', marginBottom: '20px', color: 'var(--text-main)' }}>Sign In</h2>
-
+    <PortalLayout breadcrumbs={[{ label: t('nav.home'), to: '/' }, { label: t('nav.login') }]}>
+      <div className="max-w-md mx-auto py-8">
+        <Card
+          className="shadow-lg border-t-4 border-t-gov-navy"
+          headerClassName="bg-slate-50 text-center"
+          title="Sign In to ParivarSathi"
+          subtitle="Gujarat Unified Family Beneficiary Access Portal"
+        >
           {error && (
-            <div style={{ background: 'rgba(244, 63, 94, 0.15)', border: '1px solid #f43f5e', borderRadius: '8px', padding: '10px 14px', color: '#fda4af', fontSize: '0.85rem', marginBottom: '18px' }}>
+            <div role="alert" className="mb-4 p-3 bg-red-50 border border-red-200 rounded text-xs text-red-700 font-medium">
               {error}
             </div>
           )}
 
-          <form onSubmit={handleSubmit}>
-            <div style={{ marginBottom: '16px' }}>
-              <label className="label-text">Email Address</label>
-              <input
-                id="input-login-email"
-                type="email"
-                className="input-field"
-                placeholder="name@example.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-              />
-            </div>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <Input
+              id="login-email"
+              label="Registered Email Address"
+              type="email"
+              placeholder="e.g. rajesh.patel@gmail.com"
+              required
+              autoComplete="email"
+              icon={Mail}
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+            />
 
-            <div style={{ marginBottom: '22px' }}>
-              <label className="label-text">Password</label>
-              <input
-                id="input-login-password"
-                type="password"
-                className="input-field"
-                placeholder="••••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-              />
-            </div>
+            <Input
+              id="login-password"
+              label="Account Password"
+              type="password"
+              placeholder="••••••••"
+              required
+              autoComplete="current-password"
+              icon={Lock}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+            />
 
-            <button
+            <Button
               id="btn-login-submit"
               type="submit"
-              disabled={loading}
-              className="btn btn-primary"
-              style={{ width: '100%', padding: '12px', fontSize: '0.95rem' }}
+              variant="primary"
+              size="md"
+              loading={loading}
+              className="w-full"
             >
-              {loading ? 'Authenticating...' : 'Sign In'} <ArrowRight size={16} />
-            </button>
+              <span>{t('nav.login')}</span>
+              <ArrowRight size={16} />
+            </Button>
           </form>
 
-          {/* 1-Click Quick Demo Switchers */}
-          <div style={{ marginTop: '24px', paddingTop: '20px', borderTop: '1px solid var(--border-subtle)' }}>
-            <div style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: 'var(--text-dim)', fontWeight: 700, textAlign: 'center', marginBottom: '10px', letterSpacing: '0.05em' }}>
-              Quick Demo Accounts (1-Click)
+          {/* Quick Demo Credentials Strip */}
+          <div className="mt-6 pt-5 border-t border-gov-border">
+            <div className="flex items-center gap-1.5 text-xs font-bold text-gov-navy uppercase tracking-wider mb-2.5">
+              <UserCheck size={14} className="text-gov-teal" />
+              <span>Quick Test Logins (Demo Build)</span>
             </div>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              <button
-                id="btn-demo-citizen1"
-                type="button"
-                onClick={() => handleQuickLogin('rajesh@gmail.com', 'password123')}
-                className="btn btn-secondary"
-                style={{ fontSize: '0.78rem', justifyContent: 'flex-start' }}
-              >
-                <UserCheck size={14} style={{ color: 'var(--primary-light)' }} />
-                <span><strong>Citizen:</strong> Rajesh (Farmer Family in Surendranagar)</span>
-              </button>
-
-              <button
-                id="btn-demo-citizen2"
-                type="button"
-                onClick={() => handleQuickLogin('priya@gmail.com', 'password123')}
-                className="btn btn-secondary"
-                style={{ fontSize: '0.78rem', justifyContent: 'flex-start' }}
-              >
-                <UserCheck size={14} style={{ color: 'var(--accent-cyan)' }} />
-                <span><strong>Citizen:</strong> Priya (Teacher with Senior Citizen Dad)</span>
-              </button>
-
-              <button
-                id="btn-demo-officer"
-                type="button"
-                onClick={() => handleQuickLogin('officer@gujarat.gov.in', 'password123')}
-                className="btn btn-secondary"
-                style={{ fontSize: '0.78rem', justifyContent: 'flex-start' }}
-              >
-                <ShieldAlert size={14} style={{ color: '#fbbf24' }} />
-                <span><strong>Officer:</strong> Dr. Harshil Mehta (District Officer)</span>
-              </button>
+            <div className="grid grid-cols-2 gap-2 text-xs">
+              {demoAccounts.map((acc) => (
+                <button
+                  key={acc.email}
+                  type="button"
+                  onClick={() => handleDemoLogin(acc.email, 'Test@123')}
+                  className="p-2 text-left bg-slate-50 hover:bg-blue-50 border border-gov-border hover:border-gov-navy rounded transition-colors"
+                >
+                  <div className="font-bold text-gov-navy truncate">{acc.name}</div>
+                  <div className="text-[10px] text-gov-text-muted">{acc.note}</div>
+                </button>
+              ))}
             </div>
           </div>
 
-          <div style={{ textAlign: 'center', marginTop: '20px', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-            Don't have an account? <Link to="/register" style={{ color: 'var(--primary-light)', textDecoration: 'none', fontWeight: 600 }}>Register as Citizen</Link>
+          <div className="mt-6 pt-4 border-t border-slate-100 text-center text-xs text-gov-text-muted">
+            Don't have a registered family account?{' '}
+            <Link to="/register" className="font-bold text-gov-navy hover:underline">
+              {t('nav.register')}
+            </Link>
           </div>
-        </div>
+        </Card>
       </div>
-    </div>
+    </PortalLayout>
   );
 };
 

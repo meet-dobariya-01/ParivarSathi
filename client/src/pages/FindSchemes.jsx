@@ -1,28 +1,53 @@
-import React, { useEffect, useState } from 'react';
-import api from '../api/client';
-import { Award, CheckCircle2, XCircle, Sparkles, Send, FileText, UserCheck, AlertTriangle } from 'lucide-react';
+import React, { useEffect, useState, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
+import api, { dummyEligibilityData } from '../api/client';
+import { useToast } from '../context/ToastContext';
+import PortalLayout from '../components/layout/PortalLayout';
+import SchemeFilterSidebar from '../components/portal/SchemeFilterSidebar';
+import Card from '../components/common/Card';
+import Badge from '../components/common/Badge';
+import Button from '../components/common/Button';
+import Modal from '../components/common/Modal';
+import EmptyState from '../components/common/EmptyState';
+import {
+  CheckCircle2, XCircle, Info, Send,
+  HelpCircle, UserCheck, AlertTriangle, ArrowRight, Search
+} from 'lucide-react';
 
 const FindSchemes = () => {
-  const [data, setData] = useState(null);
+  const { t } = useTranslation();
+  const { showToast } = useToast();
+
   const [loading, setLoading] = useState(true);
+  const [eligibilityData, setEligibilityData] = useState(null);
   const [error, setError] = useState('');
 
-  // Application Modal state
+  // Filters State
+  const [filters, setFilters] = useState({
+    category: '',
+    gender: '',
+    maxIncome: 1000000,
+    eligibleOnly: false,
+    searchQuery: ''
+  });
+
+  // Modals State
+  const [activeWhyModal, setActiveWhyModal] = useState(null); // scheme object for criteria inspection
   const [applyingScheme, setApplyingScheme] = useState(null);
   const [selectedApplicantId, setSelectedApplicantId] = useState('');
   const [remarks, setRemarks] = useState('');
   const [submitting, setSubmitting] = useState(false);
-  const [successMsg, setSuccessMsg] = useState('');
 
   const fetchEligibleSchemes = async () => {
     setLoading(true);
     setError('');
     try {
       const res = await api.get('/eligibility/my-family');
-      setData(res.data);
+      setEligibilityData(res.data);
     } catch (err) {
       console.error('Error fetching scheme eligibility:', err);
-      setError(err.response?.data?.message || 'Failed to evaluate family eligibility.');
+      setEligibilityData(dummyEligibilityData);
+      setError('Demo scheme evaluation loaded for preview.');
     } finally {
       setLoading(false);
     }
@@ -32,19 +57,24 @@ const FindSchemes = () => {
     fetchEligibleSchemes();
   }, []);
 
-  const handleApplyClick = (scheme) => {
+  const handleOpenApply = (scheme) => {
     setApplyingScheme(scheme);
     if (scheme.qualifying_members && scheme.qualifying_members.length > 0) {
       setSelectedApplicantId(scheme.qualifying_members[0].person_id);
+    } else {
+      setSelectedApplicantId('');
     }
     setRemarks('');
-    setSuccessMsg('');
   };
 
-  const submitApplication = async (e) => {
+  const handleSubmitApplication = async (e) => {
     e.preventDefault();
     if (!selectedApplicantId) {
-      alert('Please select an eligible family member.');
+      showToast({
+        type: 'warning',
+        title: 'Applicant Required',
+        message: 'Please select a qualified family member as the applicant.'
+      });
       return;
     }
 
@@ -55,294 +85,359 @@ const FindSchemes = () => {
         applicant_person_id: selectedApplicantId,
         remarks
       });
-      setSuccessMsg(`Application for ${applyingScheme.name} submitted successfully! Status: SUBMITTED`);
-      setTimeout(() => {
-        setApplyingScheme(null);
-        setSuccessMsg('');
-      }, 2000);
+
+      showToast({
+        type: 'success',
+        title: 'Application Submitted',
+        message: `Successfully applied for ${applyingScheme.name}. Tracking ID generated.`
+      });
+
+      setApplyingScheme(null);
+      fetchEligibleSchemes();
     } catch (err) {
-      alert(err.response?.data?.message || 'Error submitting application');
+      showToast({
+        type: 'error',
+        title: 'Submission Failed',
+        message: err.response?.data?.message || 'Failed to submit scheme application'
+      });
     } finally {
       setSubmitting(false);
     }
   };
 
-  if (loading) {
-    return (
-      <div style={{ maxWidth: '1100px', margin: '40px auto', textAlign: 'center', color: 'var(--text-muted)' }}>
-        Evaluating Gujarat Government Scheme eligibility for your family...
-      </div>
-    );
-  }
+  // Combine and normalize schemes with status
+  const allProcessedSchemes = useMemo(() => {
+    const list = [];
 
-  if (error) {
-    return (
-      <div style={{ maxWidth: '640px', margin: '60px auto', padding: '0 20px', textAlign: 'center' }}>
-        <div className="glass-panel" style={{ padding: '36px' }}>
-          <AlertTriangle size={48} style={{ color: 'var(--accent-orange)', margin: '0 auto 16px' }} />
-          <h2 style={{ fontSize: '1.4rem', marginBottom: '12px' }}>Family Profile Needed</h2>
-          <p style={{ color: 'var(--text-muted)', marginBottom: '24px' }}>{error}</p>
-          <a href="/dashboard" className="btn btn-primary" id="btn-goto-family-profile">
-            Register / View Family Profile
-          </a>
-        </div>
-      </div>
-    );
-  }
+    if (eligibilityData?.eligible_schemes) {
+      eligibilityData.eligible_schemes.forEach((s) => {
+        list.push({
+          ...s,
+          eligibilityStatus: 'ELIGIBLE',
+          badgeVariant: 'eligible'
+        });
+      });
+    }
 
-  const eligibleSchemes = data?.eligible_schemes || [];
-  const notEligibleSchemes = data?.not_eligible_schemes || [];
+    if (eligibilityData?.not_eligible_schemes) {
+      eligibilityData.not_eligible_schemes.forEach((s) => {
+        list.push({
+          ...s,
+          eligibilityStatus: 'NOT_ELIGIBLE',
+          badgeVariant: 'not_eligible'
+        });
+      });
+    }
+
+    return list;
+  }, [eligibilityData]);
+
+  // Apply filters
+  const filteredSchemes = useMemo(() => {
+    return allProcessedSchemes.filter((item) => {
+      if (filters.eligibleOnly && item.eligibilityStatus !== 'ELIGIBLE') {
+        return false;
+      }
+      if (filters.category && item.department && !item.department.toLowerCase().includes(filters.category.toLowerCase()) && !item.name.toLowerCase().includes(filters.category.toLowerCase())) {
+        return false;
+      }
+      return true;
+    });
+  }, [allProcessedSchemes, filters]);
+
+  const eligibleCount = allProcessedSchemes.filter(s => s.eligibilityStatus === 'ELIGIBLE').length;
+
+  const breadcrumbs = [
+    { label: t('nav.home'), to: '/' },
+    { label: t('nav.findSchemes') }
+  ];
 
   return (
-    <div style={{ maxWidth: '1180px', margin: '32px auto', padding: '0 20px' }}>
-      {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '28px' }}>
-        <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--primary-light)', fontSize: '0.85rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-            <Sparkles size={16} /> Rule-Based Engine
+    <PortalLayout breadcrumbs={breadcrumbs}>
+      <div className="space-y-6">
+        {/* Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-gov-border">
+          <div>
+            <h1 className="text-xl sm:text-2xl font-bold text-gov-navy flex items-center gap-2">
+              <Search size={22} className="text-gov-saffron" aria-hidden="true" />
+              <span>{t('schemes.title')}</span>
+            </h1>
+            <p className="text-xs text-gov-text-muted mt-0.5">
+              {t('schemes.subtitle')}
+            </p>
           </div>
-          <h1 style={{ fontSize: '2rem', color: 'var(--text-main)', marginTop: '4px' }}>
-            Benefits for Family: <span style={{ color: 'var(--accent-cyan)', fontFamily: 'monospace' }}>{data?.family_id}</span>
-          </h1>
-          <p style={{ color: 'var(--text-muted)', fontSize: '0.925rem', marginTop: '4px' }}>
-            Our eligibility engine evaluated {data?.total_active_schemes} schemes. Your household currently qualifies for {eligibleSchemes.length} scheme(s).
-          </p>
         </div>
 
-        <button
-          id="btn-re-evaluate"
-          onClick={fetchEligibleSchemes}
-          className="btn btn-secondary"
-          style={{ fontSize: '0.85rem' }}
-        >
-          Re-evaluate
-        </button>
-      </div>
-
-      {/* Eligible Schemes Section */}
-      <section style={{ marginBottom: '40px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '18px' }}>
-          <CheckCircle2 size={22} style={{ color: 'var(--primary)' }} />
-          <h2 style={{ fontSize: '1.3rem', color: 'var(--text-main)' }}>
-            Eligible Schemes ({eligibleSchemes.length})
-          </h2>
-        </div>
-
-        {eligibleSchemes.length === 0 ? (
-          <div className="glass-panel" style={{ padding: '24px', textAlign: 'center', color: 'var(--text-muted)' }}>
-            No schemes currently match your family's profile.
-          </div>
-        ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: '20px' }}>
-            {eligibleSchemes.map((scheme) => (
-              <div
-                key={scheme.scheme_id}
-                id={`scheme-card-${scheme.scheme_id}`}
-                className="glass-panel glass-panel-hover"
-                style={{
-                  padding: '24px',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  justifyContent: 'space-between',
-                  borderTop: '3px solid var(--primary)'
-                }}
-              >
-                <div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
-                    <span style={{ fontSize: '0.72rem', color: 'var(--accent-cyan)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                      {scheme.department}
-                    </span>
-                    <span className="badge badge-approved" style={{ fontSize: '0.7rem' }}>
-                      ✓ Eligible
-                    </span>
-                  </div>
-
-                  <h3 style={{ fontSize: '1.2rem', marginBottom: '8px', color: 'var(--text-main)' }}>
-                    {scheme.name}
-                  </h3>
-
-                  <p style={{ fontSize: '0.875rem', color: 'var(--text-muted)', marginBottom: '14px', lineHeight: '1.5' }}>
-                    {scheme.description}
-                  </p>
-
-                  {/* Benefit */}
-                  <div style={{
-                    background: 'rgba(16, 185, 129, 0.08)',
-                    border: '1px solid rgba(16, 185, 129, 0.2)',
-                    borderRadius: 'var(--radius-sm)',
-                    padding: '10px 12px',
-                    marginBottom: '14px'
-                  }}>
-                    <div style={{ fontSize: '0.72rem', textTransform: 'uppercase', color: 'var(--primary-light)', fontWeight: 700 }}>
-                      Benefit
-                    </div>
-                    <div style={{ fontSize: '0.925rem', fontWeight: 600, color: 'var(--text-main)', marginTop: '2px' }}>
-                      {scheme.benefit_description || 'Direct Financial Assistance'}
-                    </div>
-                  </div>
-
-                  {/* Why eligible / Matched Rules */}
-                  <div style={{ marginBottom: '14px' }}>
-                    <div style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '6px' }}>
-                      Why Eligible:
-                    </div>
-                    <ul style={{ listStyle: 'none', padding: 0 }}>
-                      {scheme.matched_rules?.map((rule, idx) => (
-                        <li key={idx} style={{ display: 'flex', alignItems: 'flex-start', gap: '6px', fontSize: '0.8rem', color: '#a7f3d0', marginBottom: '4px' }}>
-                          <CheckCircle2 size={13} style={{ flexShrink: 0, marginTop: '3px' }} />
-                          <span>{rule}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-
-                  {/* Required Documents */}
-                  {scheme.required_documents && (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.78rem', color: 'var(--text-dim)', marginBottom: '16px' }}>
-                      <FileText size={13} />
-                      <span><strong>Documents:</strong> {scheme.required_documents}</span>
-                    </div>
-                  )}
+        {/* Error or Profile Notice */}
+        {error && (
+          <div className="bg-amber-50 border-l-4 border-gov-saffron p-4 rounded-md border border-amber-200">
+            <div className="flex items-start gap-3">
+              <AlertTriangle size={20} className="text-gov-saffron shrink-0 mt-0.5" />
+              <div>
+                <h3 className="font-bold text-sm text-gov-navy">Family Profile Action Required</h3>
+                <p className="text-xs text-gov-text-muted mt-0.5">{error}</p>
+                <div className="mt-2">
+                  <a href="/dashboard">
+                    <Button variant="primary" size="sm">Go to Family Dashboard</Button>
+                  </a>
                 </div>
-
-                {/* Apply Button */}
-                <button
-                  id={`btn-apply-${scheme.scheme_id}`}
-                  onClick={() => handleApplyClick(scheme)}
-                  className="btn btn-primary"
-                  style={{ width: '100%', marginTop: '12px' }}
-                >
-                  <Send size={15} /> Apply Now
-                </button>
               </div>
-            ))}
+            </div>
           </div>
         )}
-      </section>
 
-      {/* Ineligible Schemes Section */}
-      <section>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '18px' }}>
-          <XCircle size={22} style={{ color: 'var(--accent-rose)' }} />
-          <h2 style={{ fontSize: '1.3rem', color: 'var(--text-main)' }}>
-            Other Active Schemes (Currently Not Eligible) ({notEligibleSchemes.length})
-          </h2>
-        </div>
+        {/* Main Grid: Left Filter Sidebar + Right Cards Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+          {/* Left Sidebar (3 cols on desktop) */}
+          <div className="lg:col-span-4">
+            <SchemeFilterSidebar
+              filters={filters}
+              onChange={setFilters}
+              onReset={() => setFilters({ category: '', gender: '', maxIncome: 1000000, eligibleOnly: false, searchQuery: '' })}
+              totalResults={allProcessedSchemes.length}
+              eligibleCount={eligibleCount}
+            />
+          </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: '16px' }}>
-          {notEligibleSchemes.map((scheme) => (
-            <div
-              key={scheme.scheme_id}
-              className="glass-panel"
-              style={{ padding: '20px', opacity: 0.75 }}
-            >
-              <div style={{ fontSize: '0.72rem', color: 'var(--text-dim)', textTransform: 'uppercase', marginBottom: '4px' }}>
-                {scheme.department}
+          {/* Right Schemes Results (8 cols on desktop) */}
+          <div className="lg:col-span-8 space-y-4">
+            {loading ? (
+              <div className="py-20 text-center space-y-3 bg-white border border-gov-border rounded-md">
+                <div className="w-10 h-10 border-4 border-gov-navy border-t-gov-saffron rounded-full animate-spin mx-auto"></div>
+                <p className="text-xs font-semibold text-gov-navy">
+                  Evaluating Gujarat Government Scheme eligibility for your household...
+                </p>
               </div>
-              <h4 style={{ fontSize: '1.05rem', color: 'var(--text-main)', marginBottom: '6px' }}>
-                {scheme.name}
-              </h4>
-
-              <div style={{ marginTop: '12px' }}>
-                <div style={{ fontSize: '0.72rem', fontWeight: 600, color: '#fca5a5', textTransform: 'uppercase', marginBottom: '4px' }}>
-                  Criteria Not Satisfied:
-                </div>
-                <ul style={{ listStyle: 'none', padding: 0 }}>
-                  {scheme.failed_rules?.map((rule, idx) => (
-                    <li key={idx} style={{ display: 'flex', alignItems: 'flex-start', gap: '6px', fontSize: '0.78rem', color: '#f87171', marginBottom: '3px' }}>
-                      <XCircle size={13} style={{ flexShrink: 0, marginTop: '2px' }} />
-                      <span>{rule}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* Apply Modal */}
-      {applyingScheme && (
-        <div className="modal-overlay" id="apply-scheme-modal">
-          <div className="modal-content animate-fade-in">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-              <h3 style={{ fontSize: '1.3rem', color: 'var(--text-main)' }}>
-                Apply for {applyingScheme.name}
-              </h3>
-              <button
-                onClick={() => setApplyingScheme(null)}
-                style={{ background: 'none', border: 'none', color: 'var(--text-dim)', fontSize: '1.4rem', cursor: 'pointer' }}
-              >
-                ×
-              </button>
-            </div>
-
-            {successMsg ? (
-              <div style={{ background: 'rgba(16, 185, 129, 0.15)', border: '1px solid #10b981', borderRadius: '8px', padding: '16px', color: '#34d399', textAlign: 'center' }}>
-                <CheckCircle2 size={28} style={{ margin: '0 auto 8px' }} />
-                <div>{successMsg}</div>
-              </div>
+            ) : filteredSchemes.length === 0 ? (
+              <EmptyState
+                icon={Sparkles}
+                title="No schemes match current filters"
+                description="Try clearing or adjusting your filters to see more active Gujarat Government welfare programs."
+                actionText="Reset All Filters"
+                onAction={() => setFilters({ category: '', gender: '', maxIncome: 1000000, eligibleOnly: false, searchQuery: '' })}
+              />
             ) : (
-              <form onSubmit={submitApplication}>
-                <div style={{ marginBottom: '16px' }}>
-                  <label className="label-text">Select Qualifying Family Member</label>
-                  <select
-                    id="select-applicant-member"
-                    className="input-field"
-                    value={selectedApplicantId}
-                    onChange={(e) => setSelectedApplicantId(e.target.value)}
-                    required
-                  >
-                    {applyingScheme.qualifying_members?.map((m) => (
-                      <option key={m.person_id} value={m.person_id} style={{ background: '#0f172a' }}>
-                        {m.name} {m.occupation ? `(${m.occupation})` : ''} {m.age ? `- Age ${m.age}` : ''}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+              <div className="space-y-4">
+                {filteredSchemes.map((scheme) => {
+                  const isEligible = scheme.eligibilityStatus === 'ELIGIBLE';
 
-                <div style={{ marginBottom: '16px' }}>
-                  <label className="label-text">Required Documents Reminder</label>
-                  <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', background: 'rgba(255,255,255,0.03)', padding: '10px 12px', borderRadius: '8px', border: '1px solid var(--border-subtle)' }}>
-                    {applyingScheme.required_documents || 'Standard Identity Proof'}
-                  </div>
-                </div>
+                  return (
+                    <Card
+                      key={scheme.scheme_id}
+                      className={`transition-all border-l-4 ${
+                        isEligible ? 'border-l-gov-green' : 'border-l-slate-300'
+                      }`}
+                      bodyClassName="p-5"
+                    >
+                      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+                        <div className="space-y-2 flex-1">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <Badge variant={scheme.badgeVariant} size="sm">
+                              {isEligible ? t('schemes.statusEligible') : t('schemes.statusNotEligible')}
+                            </Badge>
+                            <span className="text-[11px] font-mono text-gov-text-muted">
+                              {scheme.scheme_id}
+                            </span>
+                            <span className="text-slate-300">•</span>
+                            <span className="text-[11px] font-semibold text-gov-teal uppercase tracking-wider">
+                              {scheme.department}
+                            </span>
+                          </div>
 
-                <div style={{ marginBottom: '24px' }}>
-                  <label className="label-text">Applicant Remarks (Optional)</label>
-                  <textarea
-                    id="input-applicant-remarks"
-                    className="input-field"
-                    rows="3"
-                    value={remarks}
-                    onChange={(e) => setRemarks(e.target.value)}
-                    placeholder="e.g. Enrolled in 1st year B.Sc, applying with college admission receipt."
-                  />
-                </div>
+                          <h3 className="text-base font-bold text-gov-navy leading-snug">
+                            {scheme.name}
+                          </h3>
 
-                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
-                  <button
-                    type="button"
-                    onClick={() => setApplyingScheme(null)}
-                    className="btn btn-secondary"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    id="btn-confirm-apply"
-                    disabled={submitting}
-                    className="btn btn-primary"
-                  >
-                    {submitting ? 'Submitting...' : 'Confirm & Submit Application'}
-                  </button>
-                </div>
-              </form>
+                          {scheme.name_gu && (
+                            <div className="font-gujarati text-xs text-gov-text-muted">
+                              {scheme.name_gu}
+                            </div>
+                          )}
+
+                          <p className="text-xs text-gov-text-muted leading-relaxed">
+                            {scheme.benefit_summary || scheme.benefit_description}
+                          </p>
+
+                          {/* Eligible Qualifying Members Chip */}
+                          {isEligible && scheme.qualifying_members && scheme.qualifying_members.length > 0 && (
+                            <div className="pt-1 flex flex-wrap items-center gap-1.5 text-xs text-gov-navy">
+                              <span className="font-bold">{t('schemes.qualifyingMembers')}:</span>
+                              {scheme.qualifying_members.map((m) => (
+                                <span
+                                  key={m.person_id}
+                                  className="bg-green-50 text-gov-green border border-green-200 px-2 py-0.5 rounded text-xs font-semibold flex items-center gap-1"
+                                >
+                                  <UserCheck size={12} />
+                                  {m.name} ({m.relationship})
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Right Actions */}
+                        <div className="shrink-0 flex flex-col sm:items-end gap-2 pt-2 sm:pt-0">
+                          {isEligible ? (
+                            <Button
+                              variant="success"
+                              size="sm"
+                              icon={Send}
+                              onClick={() => handleOpenApply(scheme)}
+                            >
+                              {t('schemes.applyNow')}
+                            </Button>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => setActiveWhyModal(scheme)}
+                              className="text-xs font-semibold text-gov-navy hover:underline flex items-center gap-1 p-1 focus-visible:ring-1 focus-visible:ring-gov-navy rounded"
+                            >
+                              <HelpCircle size={14} className="text-gov-saffron" />
+                              <span>{t('schemes.whyNotEligible')}</span>
+                            </button>
+                          )}
+
+                          {isEligible && (
+                            <button
+                              type="button"
+                              onClick={() => setActiveWhyModal(scheme)}
+                              className="text-[11px] text-gov-text-muted hover:text-gov-navy hover:underline"
+                            >
+                              View Criteria Breakdown
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </Card>
+                  );
+                })}
+              </div>
             )}
           </div>
         </div>
+      </div>
+
+      {/* "Why?" Criteria Inspection Modal */}
+      {activeWhyModal && (
+        <Modal
+          isOpen={Boolean(activeWhyModal)}
+          onClose={() => setActiveWhyModal(null)}
+          title={activeWhyModal.name}
+          subtitle={`Scheme ID: ${activeWhyModal.scheme_id} • Rules Evaluation Report`}
+          maxWidth="max-w-lg"
+        >
+          <div className="space-y-4 text-xs">
+            <div className="p-3 bg-slate-50 border border-gov-border rounded">
+              <div className="font-bold text-gov-navy mb-1">{t('schemes.benefitAmount')}:</div>
+              <p className="text-gov-text-muted">{activeWhyModal.benefit_summary || activeWhyModal.benefit_description}</p>
+            </div>
+
+            {activeWhyModal.eligibilityStatus === 'ELIGIBLE' ? (
+              <div className="space-y-2">
+                <div className="flex items-center gap-1.5 text-gov-green font-bold">
+                  <CheckCircle2 size={16} />
+                  <span>Household Satisfies All Criteria</span>
+                </div>
+                <p className="text-gov-text-muted leading-relaxed">
+                  Every eligibility rule configured by the Department (including income ceiling, district residency, age requirements, and member demographics) has passed successfully.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <div className="flex items-center gap-1.5 text-red-700 font-bold">
+                  <XCircle size={16} />
+                  <span>{t('schemes.failedCriteria')}:</span>
+                </div>
+                <ul className="space-y-1.5 text-red-800 list-disc list-inside bg-red-50 p-3 rounded border border-red-200">
+                  {activeWhyModal.reasons && activeWhyModal.reasons.length > 0 ? (
+                    activeWhyModal.reasons.map((r, i) => (
+                      <li key={i} className="leading-snug">{r}</li>
+                    ))
+                  ) : (
+                    <li>Criteria requirements (such as age, gender, occupation, or district) are currently unmet by registered household members.</li>
+                  )}
+                </ul>
+              </div>
+            )}
+
+            <div className="pt-3 border-t border-gov-border flex justify-end">
+              <Button variant="secondary" size="sm" onClick={() => setActiveWhyModal(null)}>
+                Close
+              </Button>
+            </div>
+          </div>
+        </Modal>
       )}
-    </div>
+
+      {/* Apply Scheme Modal Dialog */}
+      {applyingScheme && (
+        <Modal
+          isOpen={Boolean(applyingScheme)}
+          onClose={() => setApplyingScheme(null)}
+          title={t('schemes.applyModalTitle')}
+          subtitle={`Applying for: ${applyingScheme.name}`}
+          maxWidth="max-w-lg"
+        >
+          <form onSubmit={handleSubmitApplication} className="space-y-4 text-xs">
+            <div>
+              <label htmlFor="applicant-select" className="block text-xs font-bold text-gov-navy uppercase tracking-wider mb-1.5">
+                {t('schemes.selectApplicant')} <span className="text-red-600">*</span>
+              </label>
+              <select
+                id="applicant-select"
+                required
+                value={selectedApplicantId}
+                onChange={(e) => setSelectedApplicantId(e.target.value)}
+                className="w-full text-sm rounded border border-gov-border p-2.5 bg-white text-gov-text focus-visible:ring-2 focus-visible:ring-gov-navy"
+              >
+                <option value="" disabled>-- Select Qualifying Family Member --</option>
+                {applyingScheme.qualifying_members?.map((m) => (
+                  <option key={m.person_id} value={m.person_id}>
+                    {m.name} ({m.relationship})
+                  </option>
+                ))}
+              </select>
+              <p className="mt-1 text-[11px] text-gov-text-muted">
+                Only family members who meet the specific eligibility rules for this scheme are listed.
+              </p>
+            </div>
+
+            <div>
+              <label htmlFor="apply-remarks" className="block text-xs font-bold text-gov-navy uppercase tracking-wider mb-1.5">
+                {t('schemes.remarksLabel')}
+              </label>
+              <textarea
+                id="apply-remarks"
+                rows={3}
+                value={remarks}
+                onChange={(e) => setRemarks(e.target.value)}
+                placeholder="Optional notes or certificate reference numbers (e.g. Income Certificate No)..."
+                className="w-full text-xs rounded border border-gov-border p-2.5 bg-white text-gov-text focus-visible:ring-2 focus-visible:ring-gov-navy outline-none"
+              />
+            </div>
+
+            <div className="p-3 bg-blue-50 border border-blue-200 rounded text-gov-navy text-[11px] leading-relaxed">
+              <strong>Declaration:</strong> I hereby apply on behalf of the selected member and consent to verification of household demographic data under ParivarSathi.
+            </div>
+
+            <div className="pt-3 border-t border-gov-border flex justify-end gap-3">
+              <Button variant="secondary" size="sm" onClick={() => setApplyingScheme(null)}>
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                variant="success"
+                size="sm"
+                loading={submitting}
+                icon={Send}
+              >
+                {t('schemes.submitApplication')}
+              </Button>
+            </div>
+          </form>
+        </Modal>
+      )}
+    </PortalLayout>
   );
 };
 

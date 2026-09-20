@@ -1,13 +1,28 @@
-// models/SchemeRule.js
 import mongoose from "mongoose";
 
+const baseSchemaConfig = {
+  timestamps: true,
+  toJSON: {
+    virtuals: true,
+    transform: (doc, ret) => {
+      ret.id = ret._id;
+      delete ret._id;
+      delete ret.__v;
+      return ret;
+    },
+  },
+};
+
 const SchemeRuleSchema = new mongoose.Schema({
-  scheme_id: { type: mongoose.Schema.Types.ObjectId, ref: "Scheme", required: true },
-  rule_scope: { type: String, enum: ["FAMILY","MEMBER"], default: "FAMILY", required: true },
-  field_name: { type: String, required: true },
-  operator: { type: String, enum: ["==","!=",">","<",">=","<="], required: true },
-  value: { type: String, required: true },
-  logical_group: { type: String, default: "AND" },
-}, { timestamps: { createdAt: "created_at", updatedAt: "updated_at" } });
+  schemeId: { type: mongoose.Schema.Types.ObjectId, ref: "Scheme", required: true, index: true },
+  appliesTo: { type: String, enum: ["FAMILY", "MEMBER"], required: true },
+  fieldName: {
+    type: String,
+    required: true,
+    enum: ["annual_income", "district", "taluka", "village", "age", "gender", "occupation", "education"],
+  },
+  operator: { type: String, enum: ["==", "!=", ">", ">=", "<", "<=", "IN"], required: true },
+  value: { type: mongoose.Schema.Types.Mixed, required: true },
+}, baseSchemaConfig);
 
 export default mongoose.model("SchemeRule", SchemeRuleSchema);

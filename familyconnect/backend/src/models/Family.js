@@ -1,14 +1,26 @@
-// models/Family.js
 import mongoose from "mongoose";
 
+const baseSchemaConfig = {
+  timestamps: true,
+  toJSON: {
+    virtuals: true,
+    transform: (doc, ret) => {
+      ret.id = ret._id;
+      delete ret._id;
+      delete ret.__v;
+      return ret;
+    },
+  },
+};
+
 const FamilySchema = new mongoose.Schema({
-  family_id: { type: String, required: true, unique: true },
-  family_head_person_id: { type: mongoose.Schema.Types.ObjectId, ref: "Person" },
-  annual_income: { type: Number, required: true },
-  address: { type: String, required: true },
+  familyId: { type: String, required: true, unique: true, index: true },
+  familyHeadPersonId: { type: mongoose.Schema.Types.ObjectId, ref: "Person", required: true },
+  annualIncome: { type: Number, required: true, min: 0 },
+  address: { type: String },
   district: { type: String, required: true },
-  taluka: { type: String, required: true },
-  village: { type: String, required: true },
-}, { timestamps: { createdAt: "created_at", updatedAt: "updated_at" } });
+  taluka: { type: String },
+  village: { type: String },
+}, baseSchemaConfig);
 
 export default mongoose.model("Family", FamilySchema);

@@ -1,168 +1,208 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import api from '../api/client';
+import { useTranslation } from 'react-i18next';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
 import { useAuth } from '../context/AuthContext';
-import { Shield, ArrowRight } from 'lucide-react';
+import { useToast } from '../context/ToastContext';
+import PortalLayout from '../components/layout/PortalLayout';
+import Card from '../components/common/Card';
+import Button from '../components/common/Button';
+import Input from '../components/common/Input';
+import Select from '../components/common/Select';
+import { UserPlus, Shield, Check } from 'lucide-react';
+
+const registerSchema = z.object({
+  name: z.string().min(2, 'Full name must be at least 2 characters'),
+  email: z.string().email('Please enter a valid email address'),
+  password: z.string().min(6, 'Password must be at least 6 characters'),
+  gender: z.enum(['Male', 'Female', 'Other'], {
+    errorMap: () => ({ message: 'Please select a valid gender' })
+  }),
+  date_of_birth: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Valid Date of Birth is required'),
+  mobile: z.string().regex(/^[6-9]\d{9}$/, 'Enter valid 10-digit mobile number').optional().or(z.literal('')),
+  aadhar_last_4: z.string().regex(/^\d{4}$/, 'Enter exactly 4 digits').optional().or(z.literal(''))
+});
 
 const Register = () => {
-  const { setUser } = useAuth();
+  const { t } = useTranslation();
+  const { register: registerUser } = useAuth();
+  const { showToast } = useToast();
   const navigate = useNavigate();
 
-  const [form, setForm] = useState({
-    name: '',
-    email: '',
-    password: '',
-    date_of_birth: '1995-05-15',
-    gender: 'Male',
-    mobile: '',
-    occupation: 'Citizen',
-    education: 'High School'
-  });
-  const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [serverError, setServerError] = useState('');
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setError('');
+  const {
+    register,
+    handleSubmit,
+    formState: { errors }
+  } = useForm({
+    resolver: zodResolver(registerSchema),
+    defaultValues: {
+      name: '',
+      email: '',
+      password: '',
+      gender: 'Male',
+      date_of_birth: '',
+      mobile: '',
+      aadhar_last_4: ''
+    }
+  });
+
+  const onSubmit = async (data) => {
+    setServerError('');
     setLoading(true);
+
     try {
-      const { data } = await api.post('/auth/register', { ...form, role: 'CITIZEN' });
-      localStorage.setItem('parivar_token', data.token);
-      setUser(data);
-      navigate('/dashboard');
+      // Call AuthContext register or api.post('/auth/register')
+      const res = await api.post('/auth/register', data);
+      localStorage.setItem('parivar_token', res.data.token);
+
+      showToast({
+        type: 'success',
+        title: 'Registration Successful',
+        message: 'Your citizen account has been created.'
+      });
+
+      // Reload or navigate to dashboard
+      window.location.href = '/dashboard';
     } catch (err) {
-      setError(err.response?.data?.message || 'Registration failed');
+      console.error('Registration error:', err);
+      const msg = err.response?.data?.message || 'Registration failed. Please check inputs.';
+      setServerError(msg);
+      showToast({
+        type: 'error',
+        title: 'Registration Failed',
+        message: msg
+      });
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div style={{ minHeight: '90vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px' }}>
-      <div style={{ width: '100%', maxWidth: '520px' }}>
-        <div style={{ textAlign: 'center', marginBottom: '24px' }}>
-          <h1 style={{ fontSize: '1.8rem', color: '#fff' }}>Register as Citizen</h1>
-          <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginTop: '4px' }}>
-            Create your account to obtain and manage your Gujarat Family ID.
-          </p>
-        </div>
-
-        <div className="glass-panel" style={{ padding: '32px' }}>
-          {error && (
-            <div style={{ background: 'rgba(244, 63, 94, 0.15)', border: '1px solid #f43f5e', borderRadius: '8px', padding: '10px 14px', color: '#fda4af', fontSize: '0.85rem', marginBottom: '18px' }}>
-              {error}
+    <PortalLayout breadcrumbs={[{ label: t('nav.home'), to: '/' }, { label: t('nav.register') }]}>
+      <div className="max-w-lg mx-auto py-6">
+        <Card
+          className="shadow-lg border-t-4 border-t-gov-saffron"
+          headerClassName="bg-slate-50 text-center"
+          title="Citizen Registration"
+          subtitle="Enrol for Gujarat Unified Household Beneficiary Registry"
+        >
+          {serverError && (
+            <div role="alert" className="mb-4 p-3 bg-red-50 border border-red-200 rounded text-xs text-red-700 font-medium">
+              {serverError}
             </div>
           )}
 
-          <form onSubmit={handleSubmit}>
-            <div style={{ marginBottom: '14px' }}>
-              <label className="label-text">Full Name</label>
-              <input
-                id="reg-name"
-                type="text"
-                className="input-field"
-                placeholder="e.g. Ramesh Patel"
-                value={form.name}
-                onChange={(e) => setForm({ ...form, name: e.target.value })}
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 text-xs">
+            <Input
+              id="reg-name"
+              label="Citizen Full Name (As per Government Records)"
+              placeholder="e.g. Ramesh Patel"
+              required
+              {...register('name')}
+              error={errors.name?.message}
+            />
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <Input
+                id="reg-email"
+                label="Email Address"
+                type="email"
+                placeholder="citizen@example.com"
                 required
+                {...register('email')}
+                error={errors.email?.message}
+              />
+
+              <Input
+                id="reg-password"
+                label="Create Password"
+                type="password"
+                placeholder="Min 6 characters"
+                required
+                {...register('password')}
+                error={errors.password?.message}
               />
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '14px' }}>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <Input
+                id="reg-dob"
+                label="Date of Birth"
+                type="date"
+                required
+                {...register('date_of_birth')}
+                error={errors.date_of_birth?.message}
+              />
+
+              <Select
+                id="reg-gender"
+                label="Gender"
+                required
+                options={[
+                  { value: 'Male', label: 'Male / પુરુષ' },
+                  { value: 'Female', label: 'Female / સ્ત્રી' },
+                  { value: 'Other', label: 'Other / અન્ય' }
+                ]}
+                {...register('gender')}
+                error={errors.gender?.message}
+              />
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <Input
+                id="reg-mobile"
+                label="Mobile Number (Optional)"
+                placeholder="e.g. 9876543210"
+                {...register('mobile')}
+                error={errors.mobile?.message}
+              />
+
               <div>
-                <label className="label-text">Email</label>
-                <input
-                  id="reg-email"
-                  type="email"
-                  className="input-field"
-                  placeholder="ramesh@gmail.com"
-                  value={form.email}
-                  onChange={(e) => setForm({ ...form, email: e.target.value })}
-                  required
-                />
-              </div>
-              <div>
-                <label className="label-text">Password</label>
-                <input
-                  id="reg-password"
-                  type="password"
-                  className="input-field"
-                  placeholder="••••••••"
-                  value={form.password}
-                  onChange={(e) => setForm({ ...form, password: e.target.value })}
-                  required
+                <Input
+                  id="reg-aadhar"
+                  label="Aadhaar Last 4 Digits"
+                  placeholder="•••• 1234"
+                  maxLength={4}
+                  {...register('aadhar_last_4')}
+                  error={errors.aadhar_last_4?.message}
                 />
               </div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '14px' }}>
-              <div>
-                <label className="label-text">Date of Birth</label>
-                <input
-                  id="reg-dob"
-                  type="date"
-                  className="input-field"
-                  value={form.date_of_birth}
-                  onChange={(e) => setForm({ ...form, date_of_birth: e.target.value })}
-                  required
-                />
-              </div>
-              <div>
-                <label className="label-text">Gender</label>
-                <select
-                  id="reg-gender"
-                  className="input-field"
-                  value={form.gender}
-                  onChange={(e) => setForm({ ...form, gender: e.target.value })}
-                >
-                  <option value="Male">Male</option>
-                  <option value="Female">Female</option>
-                  <option value="Other">Other</option>
-                </select>
-              </div>
+            <div className="p-3 bg-blue-50/70 border border-blue-200 rounded text-gov-navy text-[11px] flex items-start gap-2">
+              <Shield size={16} className="text-gov-teal shrink-0 mt-0.5" />
+              <span>
+                Your data is protected under State Data Security protocols. Aadhaar information is strictly stored in masked format.
+              </span>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '22px' }}>
-              <div>
-                <label className="label-text">Occupation</label>
-                <input
-                  id="reg-occupation"
-                  type="text"
-                  className="input-field"
-                  value={form.occupation}
-                  onChange={(e) => setForm({ ...form, occupation: e.target.value })}
-                />
-              </div>
-              <div>
-                <label className="label-text">Mobile</label>
-                <input
-                  id="reg-mobile"
-                  type="text"
-                  className="input-field"
-                  placeholder="9876543210"
-                  value={form.mobile}
-                  onChange={(e) => setForm({ ...form, mobile: e.target.value })}
-                />
-              </div>
-            </div>
-
-            <button
-              id="btn-reg-submit"
+            <Button
+              id="btn-register-submit"
               type="submit"
-              disabled={loading}
-              className="btn btn-primary"
-              style={{ width: '100%', padding: '12px', fontSize: '0.95rem' }}
+              variant="saffron"
+              size="md"
+              loading={loading}
+              className="w-full mt-2"
+              icon={Check}
             >
-              {loading ? 'Creating Account...' : 'Register & Continue'} <ArrowRight size={16} />
-            </button>
+              Complete Registration & Create Account
+            </Button>
           </form>
 
-          <div style={{ textAlign: 'center', marginTop: '20px', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-            Already have an account? <Link to="/login" style={{ color: 'var(--primary-light)', textDecoration: 'none', fontWeight: 600 }}>Sign In</Link>
+          <div className="mt-6 pt-4 border-t border-slate-100 text-center text-xs text-gov-text-muted">
+            Already have an account?{' '}
+            <Link to="/login" className="font-bold text-gov-navy hover:underline">
+              {t('nav.login')}
+            </Link>
           </div>
-        </div>
+        </Card>
       </div>
-    </div>
+    </PortalLayout>
   );
 };
 

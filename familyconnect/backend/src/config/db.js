@@ -1,13 +1,28 @@
-// config/db.js
 import mongoose from "mongoose";
+import { MongoMemoryServer } from "mongodb-memory-server";
+import { ENV } from "./env.js";
+
+let memoryServer;
 
 const connectDB = async () => {
   try {
-    const conn = await mongoose.connect(process.env.MONGODB_URI);
-    console.log(`MongoDB Connected: ${conn.connection.host}`);
+    const mongoUri = ENV.DATABASE_URL;
+    await mongoose.connect(mongoUri);
+    console.log("Mongo connected");
   } catch (error) {
-    console.error("MongoDB connection error:", error.message);
-    process.exit(1);
+    if (ENV.NODE_ENV !== "production" && !process.env.DATABASE_URL && !process.env.MONGODB_URI) {
+      try {
+        memoryServer = await MongoMemoryServer.create();
+        await mongoose.connect(memoryServer.getUri());
+        console.log("Mongo connected");
+        return;
+      } catch (memoryError) {
+        console.error("Mongo memory server connection error:", memoryError.message);
+      }
+    }
+
+    console.error("Mongo connection error:", error.message);
+    throw error;
   }
 };
 

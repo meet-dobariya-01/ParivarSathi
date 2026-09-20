@@ -1,0 +1,50 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32" role="img" aria-labelledby="ps-fav-title">
+  <title id="ps-fav-title">ParivarSathi</title>
+
+  <!--
+    ParivarSathi — 32px Favicon
+    Pixel-optimised: no thin lines, all shapes ≥ 2px wide
+    Colors: Navy #1a3a6b | Saffron #ff9933 | White #ffffff | Green #138808
+  -->
+
+  <!-- Shield (rounded pentagon) -->
+  <path
+    d="M16 1 L31 6.5 L31 20 Q31 29 16 32 Q1 29 1 20 L1 6.5 Z"
+    fill="#1a3a6b"
+  />
+
+  <!-- Saffron top band (government stripe) -->
+  <path
+    d="M16 1 L31 6.5 L31 9 L16 3.5 L1 9 L1 6.5 Z"
+    fill="#ff9933"
+  />
+
+  <!-- Roof (2px thick, saffron) -->
+  <polyline
+    points="6,17 16,9 26,17"
+    fill="none"
+    stroke="#ff9933"
+    stroke-width="2.5"
+    stroke-linejoin="round"
+    stroke-linecap="round"
+  />
+
+  <!-- Three figures — simplified circles + arcs at favicon scale -->
+  <!-- Centre head -->
+  <circle cx="16" cy="20" r="2.8" fill="#ff9933"/>
+  <!-- Left head -->
+  <circle cx="9.5" cy="21" r="2.2" fill="#ff9933"/>
+  <!-- Right head -->
+  <circle cx="22.5" cy="21" r="2.2" fill="#ff9933"/>
+
+  <!-- Bodies as single rounded rectangles -->
+  <rect x="13" y="23" width="6" height="5" rx="1.5" fill="#ff9933"/>
+  <rect x="6.8" y="23.5" width="4.8" height="4" rx="1.2" fill="#ff9933"/>
+  <rect x="20.4" y="23.5" width="4.8" height="4" rx="1.2" fill="#ff9933"/>
+
+  <!-- Green ID dot — bottom right (works at 32px) -->
+  <rect x="22.5" y="27" width="6" height="4" rx="1" fill="#138808"/>
+  <rect x="23.5" y="28" width="2" height="2" rx="0.3" fill="#ffffff"/>
+  <rect x="26.5" y="28" width="1.5" height="0.8" rx="0.2" fill="#ffffff"/>
+  <rect x="26.5" y="29.2" width="1.5" height="0.8" rx="0.2" fill="#ffffff"/>
+</svg>

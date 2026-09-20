@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 110" width="100" height="110" role="img" aria-labelledby="ps-logo-title ps-logo-desc">
+  <title id="ps-logo-title">ParivarSathi — Family Beneficiary Portal</title>
+  <desc id="ps-logo-desc">Official emblem of ParivarSathi showing family under protective shelter with digital verification badge</desc>
+
+  <defs>
+    <!-- Base geometric clip for clean government aesthetic -->
+    <clipPath id="shield-clip">
+      <path d="M 50,4 L 92,20 L 92,62 C 92,86 50,106 50,106 C 50,106 8,86 8,62 L 8,20 Z" />
+    </clipPath>
+  </defs>
+
+  <!-- Outer Shield Container (Navy #1a3a6b) -->
+  <path d="M 50,4 L 92,20 L 92,62 C 92,86 50,106 50,106 C 50,106 8,86 8,62 L 8,20 Z"
+        fill="#1a3a6b" />
+
+  <!-- Saffron Top Accent Header Band -->
+  <path d="M 50,4 L 92,20 L 92,27 L 50,11 L 8,27 L 8,20 Z"
+        fill="#ff9933" />
+
+  <!-- Roof Peak / Shelter Arc (Saffron #ff9933) -->
+  <path d="M 20,48 L 50,28 L 80,48 L 74,52 L 50,36 L 26,52 Z"
+        fill="#ff9933" />
+
+  <!-- 3 Family Figures (Connected Household) -->
+  <!-- Figure 1 (Left - Adult / Mother) -->
+  <circle cx="34" cy="56" r="6" fill="#ffffff" />
+  <path d="M 25,66 C 25,63 29,63 34,63 C 39,63 43,63 43,66 L 41,80 C 41,82 27,82 27,80 Z" fill="#ffffff" />
+
+  <!-- Figure 2 (Center - Child / Dependent) -->
+  <circle cx="50" cy="62" r="5" fill="#ffffff" />
+  <path d="M 43,71 C 43,68 47,68 50,68 C 53,68 57,68 57,71 L 55,82 C 55,84 45,84 45,82 Z" fill="#ffffff" />
+
+  <!-- Figure 3 (Right - Adult / Father) -->
+  <circle cx="66" cy="56" r="6" fill="#ffffff" />
+  <path d="M 57,66 C 57,63 61,63 66,63 C 71,63 75,63 75,66 L 73,80 C 73,82 59,82 59,80 Z" fill="#ffffff" />
+
+  <!-- Unified Family Foundation Bar (Green #138808) -->
+  <rect x="25" y="85" width="50" height="4" rx="2" fill="#138808" />
+
+  <!-- Bottom-Right Digital ID / Verification Chip (Green #138808 with White Check) -->
+  <g transform="translate(64, 74)">
+    <rect x="0" y="0" width="22" height="22" rx="4" fill="#138808" stroke="#ffffff" stroke-width="1.5" />
+    <!-- Checkmark icon -->
+    <path d="M 5,11 L 9,15 L 17,7" fill="none" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />
+  </g>
+</svg>

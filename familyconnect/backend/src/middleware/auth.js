@@ -1,22 +1,32 @@
-// middleware/auth.js
 import jwt from "jsonwebtoken";
+
 import { ENV } from "../config/env.js";
 import User from "../models/User.js";
+import { createHttpError } from "./error.js";
 
-export const protect = async (req, res, next) => {
+export const requireAuth = async (req, res, next) => {
   try {
-    const auth = req.headers.authorization;
-    if (!auth || !auth.startsWith("Bearer ")) {
-      return res.status(401).json({ message: "Not authorized, no token" });
+    const authHeader = req.headers.authorization;
+
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      throw createHttpError(401, "Authentication required", "AUTH_REQUIRED");
     }
-    const token = auth.split(" ")[1];
-    const decoded = jwt.verify(token, ENV.JWT_SECRET);
-    req.user = await User.findById(decoded.id).select("-password_hash").populate("person_id");
-    if (!req.user || !req.user.is_active) {
-      return res.status(401).json({ message: "Not authorized, user not found or inactive" });
+
+    const token = authHeader.split(" ")[1];
+    const decoded = jwt.verify(token, ENV.JWT_SECRET_KEY);
+    const user = await User.findById(decoded.sub).populate("personId");
+
+    if (!user) {
+      throw createHttpError(401, "User not found", "USER_NOT_FOUND");
     }
-    next();
-  } catch (err) {
-    return res.status(401).json({ message: "Not authorized, token failed" });
+
+    req.user = user;
+    return next();
+  } catch (error) {
+    if (error.name === "JsonWebTokenError" || error.name === "TokenExpiredError") {
+      return next(createHttpError(401, "Invalid or expired token", "INVALID_TOKEN"));
+    }
+
+    return next(error);
   }
 };

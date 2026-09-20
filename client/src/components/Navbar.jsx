@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import logoSvg from '../assets/logo.svg';
 import { Shield, Users, Award, FileText, BarChart3, LogOut, Layers } from 'lucide-react';
 
 const Navbar = () => {
@@ -31,7 +32,6 @@ const Navbar = () => {
         alignItems: 'center',
         justifyContent: 'space-between'
       }}>
-        {/* Logo */}
         <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: '10px', textDecoration: 'none', color: 'inherit' }}>
           <div style={{
             width: '38px',
@@ -44,7 +44,7 @@ const Navbar = () => {
             color: '#fff',
             boxShadow: '0 0 14px rgba(16, 185, 129, 0.4)'
           }}>
-            <Shield size={22} />
+            <img src={logoSvg} alt="ParivarSathi logo" style={{ width: '22px', height: '22px', objectFit: 'contain' }} />
           </div>
           <div>
             <div style={{ fontSize: '1.2rem', fontWeight: 800, fontFamily: 'var(--font-heading)', letterSpacing: '-0.02em', background: 'linear-gradient(90deg, #fff 30%, #34d399 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>

@@ -5,15 +5,39 @@ import Scheme from "../models/Scheme.js";
 import SchemeRule from "../models/SchemeRule.js";
 
 const calculateAge = (dob) => {
-  const diff = Date.now() - new Date(dob).getTime();
+  const actualDob = dob ? new Date(dob) : null;
+  if (!actualDob || Number.isNaN(actualDob.getTime())) return null;
+  const diff = Date.now() - actualDob.getTime();
   return Math.abs(new Date(diff).getUTCFullYear() - 1970);
+};
+
+const resolveField = (record, fieldName) => {
+  if (!record) return undefined;
+  const candidates = [fieldName];
+  const camelCase = fieldName.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase());
+  const underscored = fieldName.replace(/[A-Z]/g, (letter) => `_${letter.toLowerCase()}`);
+  candidates.push(camelCase, underscored);
+
+  for (const candidate of candidates) {
+    if (Object.prototype.hasOwnProperty.call(record, candidate)) {
+      return record[candidate];
+    }
+  }
+
+  return undefined;
 };
 
 const evalRule = (actual, op, target) => {
   const n1 = Number(actual), n2 = Number(target);
-  const isNum = !isNaN(n1) && !isNaN(n2);
+  const isNum = !Number.isNaN(n1) && !Number.isNaN(n2);
   const a = isNum ? n1 : String(actual ?? "").toLowerCase().trim();
   const b = isNum ? n2 : String(target ?? "").toLowerCase().trim();
+
+  if (op === "IN") {
+    const list = Array.isArray(target) ? target.map((item) => String(item).toLowerCase()) : [];
+    return list.includes(String(actual ?? "").toLowerCase());
+  }
+
   switch (op) {
     case "==": return a === b;
     case "!=": return a !== b;
@@ -37,34 +61,34 @@ export const evaluateForFamily = (family, members, rules) => {
     return { eligible: true, matched_rules: ["Open for all citizens"], failed_rules: [], qualifying_members: members.map((m) => ({ person_id: m._id, name: m.name })) };
   }
 
-  const familyRules = rules.filter((r) => r.rule_scope === "FAMILY");
-  const memberRules = rules.filter((r) => r.rule_scope === "MEMBER");
+  const familyRules = rules.filter((r) => (r.appliesTo ?? r.rule_scope) === "FAMILY");
+  const memberRules = rules.filter((r) => (r.appliesTo ?? r.rule_scope) === "MEMBER");
   const matched = [], failed = [];
   let familyPassed = true;
 
   for (const r of familyRules) {
-    const actual = family[r.field_name];
+    const actual = resolveField(family, r.fieldName ?? r.field_name);
     const pass = evalRule(actual, r.operator, r.value);
-    (pass ? matched : failed).push(fmtRule("FAMILY", r.field_name, r.operator, r.value, actual, pass));
+    (pass ? matched : failed).push(fmtRule("FAMILY", r.fieldName ?? r.field_name, r.operator, r.value, actual, pass));
     if (!pass) familyPassed = false;
   }
 
   let qualifyingMembers = [];
   if (memberRules.length > 0) {
     for (const m of members) {
-      const age = calculateAge(m.date_of_birth);
+      const age = calculateAge(resolveField(m, "date_of_birth") ?? m.dateOfBirth);
       const mData = { ...(m.toObject ? m.toObject() : m), age };
       let allPass = true;
       const mMatched = [], mFailed = [];
       for (const r of memberRules) {
-        const actual = mData[r.field_name];
+        const actual = resolveField(mData, r.fieldName ?? r.field_name);
         const pass = evalRule(actual, r.operator, r.value);
-        (pass ? mMatched : mFailed).push(fmtRule("MEMBER", r.field_name, r.operator, r.value, actual, pass, m.name));
+        (pass ? mMatched : mFailed).push(fmtRule("MEMBER", r.fieldName ?? r.field_name, r.operator, r.value, actual, pass, m.name));
         if (!pass) allPass = false;
       }
       if (allPass) { qualifyingMembers.push({ person_id: m._id, name: m.name, age, occupation: m.occupation }); matched.push(...mMatched); }
     }
-    if (qualifyingMembers.length === 0) failed.push(`No member satisfies: ${memberRules.map((r) => `${r.field_name} ${r.operator} ${r.value}`).join(", ")}`);
+    if (qualifyingMembers.length === 0) failed.push(`No member satisfies: ${memberRules.map((r) => `${r.fieldName ?? r.field_name} ${r.operator} ${r.value}`).join(", ")}`);
   } else {
     qualifyingMembers = members.map((m) => ({ person_id: m._id, name: m.name }));
   }

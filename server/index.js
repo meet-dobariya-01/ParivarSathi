@@ -11,6 +11,7 @@ const schemeRoutes = require('./routes/scheme');
 const applicationRoutes = require('./routes/application');
 const eligibilityRoutes = require('./routes/eligibility');
 const officerRoutes = require('./routes/officer');
+const dashboardRoutes = require('./routes/dashboard');
 
 const app = express();
 app.use(cors());
@@ -26,6 +27,7 @@ app.use('/api/scheme', schemeRoutes);
 app.use('/api/application', applicationRoutes);
 app.use('/api/eligibility', eligibilityRoutes);
 app.use('/api/officer', officerRoutes);
+app.use('/api/dashboard', dashboardRoutes);
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));

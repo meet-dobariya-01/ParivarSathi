@@ -1,27 +1,44 @@
 import React, { useEffect, useState } from 'react';
-import api from '../api/client';
-import StatusBadge from '../components/StatusBadge';
-import { FileText, CheckCircle2, XCircle, Clock, Filter, Eye, AlertCircle } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
+import api, { dummyApplications } from '../api/client';
+import { useToast } from '../context/ToastContext';
+import PortalLayout from '../components/layout/PortalLayout';
+import DataTable from '../components/common/DataTable';
+import Badge from '../components/common/Badge';
+import Button from '../components/common/Button';
+import Modal from '../components/common/Modal';
+import {
+  CheckSquare, RefreshCw, CheckCircle2, XCircle,
+  FileText, User, Calendar, Eye
+} from 'lucide-react';
 
 const OfficerApplications = () => {
+  const { t } = useTranslation();
+  const { showToast } = useToast();
+
   const [applications, setApplications] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [statusFilter, setStatusFilter] = useState('');
+  const [selectedStatus, setSelectedStatus] = useState('ALL');
 
-  // Review Modal state
-  const [selectedApp, setSelectedApp] = useState(null);
-  const [newStatus, setNewStatus] = useState('APPROVED');
+  // Review Dialog
+  const [reviewingApp, setReviewingApp] = useState(null);
+  const [reviewDecision, setReviewDecision] = useState('APPROVED'); // 'APPROVED' | 'REJECTED' | 'UNDER_REVIEW'
   const [remarks, setRemarks] = useState('');
-  const [updating, setUpdating] = useState(false);
+  const [submittingReview, setSubmittingReview] = useState(false);
 
   const fetchApplications = async () => {
     setLoading(true);
     try {
-      const url = statusFilter ? `/application/all?status=${statusFilter}` : '/application/all';
-      const { data } = await api.get(url);
-      setApplications(data);
+      const { data } = await api.get('/officer/applications');
+      setApplications(data || []);
     } catch (err) {
-      console.error('Error fetching applications for officer:', err);
+      console.error('Error fetching officer applications:', err);
+      setApplications(dummyApplications);
+      showToast({
+        type: 'info',
+        title: 'Demo Review Queue',
+        message: 'Sample application records are shown for preview while the queue service is unavailable.'
+      });
     } finally {
       setLoading(false);
     }
@@ -29,186 +46,289 @@ const OfficerApplications = () => {
 
   useEffect(() => {
     fetchApplications();
-  }, [statusFilter]);
+  }, []);
 
-  const handleOpenReview = (app) => {
-    setSelectedApp(app);
-    setNewStatus(app.status === 'SUBMITTED' ? 'UNDER_REVIEW' : app.status);
-    setRemarks(app.remarks || '');
-  };
-
-  const handleSaveReview = async (e) => {
+  const handleReviewSubmit = async (e) => {
     e.preventDefault();
-    setUpdating(true);
+    if (!reviewingApp) return;
+
+    setSubmittingReview(true);
     try {
-      await api.put(`/application/${selectedApp._id}/review`, {
-        status: newStatus,
-        remarks
+      await api.put(`/application/${reviewingApp._id}/review`, {
+        status: reviewDecision,
+        remarks: remarks || `Application ${reviewDecision.toLowerCase()} by officer.`
       });
-      setSelectedApp(null);
+
+      showToast({
+        type: 'success',
+        title: 'Review Completed',
+        message: `Application marked as ${reviewDecision}.`
+      });
+
+      setReviewingApp(null);
       fetchApplications();
     } catch (err) {
-      alert(err.response?.data?.message || 'Failed to update review status');
+      showToast({
+        type: 'error',
+        title: 'Review Failed',
+        message: err.response?.data?.message || 'Failed to update application status'
+      });
     } finally {
-      setUpdating(false);
+      setSubmittingReview(false);
     }
   };
 
-  return (
-    <div style={{ maxWidth: '1280px', margin: '32px auto', padding: '0 20px' }}>
-      {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+  const filteredApps = applications.filter((app) => {
+    if (selectedStatus === 'ALL') return true;
+    return app.status === selectedStatus;
+  });
+
+  const formatAppId = (id) => {
+    if (!id) return 'APP-00000';
+    return `APP-${id.slice(-6).toUpperCase()}`;
+  };
+
+  const getStatusVariant = (status) => {
+    if (status === 'APPROVED') return 'approved';
+    if (status === 'UNDER_REVIEW') return 'under_review';
+    if (status === 'SUBMITTED') return 'submitted';
+    if (status === 'REJECTED') return 'rejected';
+    return 'default';
+  };
+
+  const columns = [
+    {
+      header: 'App ID',
+      accessor: '_id',
+      render: (row) => (
+        <span className="font-mono font-bold text-gov-navy text-xs bg-blue-50 px-2 py-0.5 rounded border border-blue-200">
+          {formatAppId(row._id)}
+        </span>
+      )
+    },
+    {
+      header: 'Scheme Name',
+      render: (row) => (
         <div>
-          <h1 style={{ fontSize: '1.8rem', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <FileText className="text-emerald-400" size={28} /> Application Review Portal
-          </h1>
-          <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginTop: '4px' }}>
-            Verify citizen eligibility and grant scheme approvals with official remarks.
-          </p>
+          <div className="font-bold text-gov-navy text-xs sm:text-sm">
+            {row.scheme_id?.name || 'Welfare Scheme'}
+          </div>
+          <div className="text-[11px] text-gov-text-muted">
+            {row.scheme_id?.department}
+          </div>
+        </div>
+      )
+    },
+    {
+      header: 'Applicant & Family',
+      render: (row) => (
+        <div className="text-xs">
+          <div className="font-bold text-gov-navy">
+            {row.applicant_person_id?.name || 'Applicant'}
+          </div>
+          <div className="text-[11px] font-mono text-gov-text-muted">
+            {row.family_id?.family_id || 'Family'}
+          </div>
+        </div>
+      )
+    },
+    {
+      header: 'District',
+      render: (row) => (
+        <span className="text-xs text-gov-text">
+          {row.family_id?.district || 'Gujarat'}
+        </span>
+      )
+    },
+    {
+      header: 'Date',
+      render: (row) => (
+        <span className="text-xs text-gov-text-muted font-mono">
+          {new Date(row.createdAt).toLocaleDateString('en-IN')}
+        </span>
+      )
+    },
+    {
+      header: 'Status',
+      render: (row) => (
+        <Badge variant={getStatusVariant(row.status)} size="sm">
+          {row.status}
+        </Badge>
+      )
+    },
+    {
+      header: 'Action',
+      render: (row) => (
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={() => {
+            setReviewingApp(row);
+            setReviewDecision(row.status === 'APPROVED' ? 'APPROVED' : 'APPROVED');
+            setRemarks(row.officer_remarks || '');
+          }}
+        >
+          Review
+        </Button>
+      )
+    }
+  ];
+
+  const breadcrumbs = [
+    { label: t('nav.home'), to: '/' },
+    { label: t('nav.officerDashboard'), to: '/officer/dashboard' },
+    { label: 'Application Queue' }
+  ];
+
+  return (
+    <PortalLayout breadcrumbs={breadcrumbs}>
+      <div className="space-y-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-gov-border">
+          <div>
+            <h1 className="text-xl sm:text-2xl font-bold text-gov-navy flex items-center gap-2">
+              <CheckSquare size={24} className="text-gov-navy" />
+              <span>Citizen Applications Verification Queue</span>
+            </h1>
+            <p className="text-xs text-gov-text-muted mt-0.5">
+              Review and certify citizen welfare applications submitted across Gujarat districts.
+            </p>
+          </div>
+
+          <Button
+            variant="secondary"
+            size="sm"
+            icon={RefreshCw}
+            loading={loading}
+            onClick={fetchApplications}
+          >
+            Refresh Queue
+          </Button>
         </div>
 
-        {/* Filter */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <Filter size={16} style={{ color: 'var(--text-dim)' }} />
-          <select
-            id="filter-application-status"
-            className="input-field"
-            style={{ width: '180px', padding: '8px 12px', fontSize: '0.85rem' }}
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-          >
-            <option value="">All Statuses</option>
-            <option value="SUBMITTED">SUBMITTED</option>
-            <option value="UNDER_REVIEW">UNDER_REVIEW</option>
-            <option value="APPROVED">APPROVED</option>
-            <option value="REJECTED">REJECTED</option>
-          </select>
+        {/* Status Filter Tabs */}
+        <div className="flex items-center gap-2 overflow-x-auto pb-1">
+          {['ALL', 'SUBMITTED', 'UNDER_REVIEW', 'APPROVED', 'REJECTED'].map((status) => (
+            <button
+              key={status}
+              type="button"
+              onClick={() => setSelectedStatus(status)}
+              className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-colors focus-visible:ring-2 focus-visible:ring-gov-navy ${
+                selectedStatus === status
+                  ? 'bg-gov-navy text-white'
+                  : 'bg-white text-gov-text border border-gov-border hover:bg-slate-100'
+              }`}
+            >
+              {status} {status !== 'ALL' && `(${applications.filter(a => a.status === status).length})`}
+            </button>
+          ))}
         </div>
+
+        {/* Applications DataTable */}
+        <DataTable
+          columns={columns}
+          data={filteredApps}
+          keyField="_id"
+          emptyMessage="No applications currently match the selected status filter."
+        />
       </div>
 
-      {loading ? (
-        <div style={{ textAlign: 'center', padding: '60px', color: 'var(--text-muted)' }}>
-          Loading applications...
-        </div>
-      ) : applications.length === 0 ? (
-        <div className="glass-panel" style={{ padding: '40px', textAlign: 'center', color: 'var(--text-muted)' }}>
-          No applications match the selected criteria.
-        </div>
-      ) : (
-        <div className="glass-panel" style={{ padding: '8px' }}>
-          <div className="table-container">
-            <table className="custom-table" id="officer-applications-table">
-              <thead>
-                <tr>
-                  <th>Application ID</th>
-                  <th>Family ID & District</th>
-                  <th>Beneficiary Member</th>
-                  <th>Applied Scheme</th>
-                  <th>Status</th>
-                  <th>Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {applications.map((app) => (
-                  <tr key={app._id}>
-                    <td style={{ fontFamily: 'monospace', fontWeight: 700, color: 'var(--accent-cyan)' }}>
-                      APP-{app._id.slice(-5).toUpperCase()}
-                    </td>
-                    <td>
-                      <div style={{ fontWeight: 600, fontFamily: 'monospace', color: 'var(--text-main)' }}>
-                        {app.family_id?.family_id || 'GJ-FAM-UNKNOWN'}
-                      </div>
-                      <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                        {app.family_id?.district} (Inc: ₹{app.family_id?.annual_income?.toLocaleString('en-IN')})
-                      </div>
-                    </td>
-                    <td>
-                      <div style={{ fontWeight: 600 }}>{app.applicant_person_id?.name || 'Applicant'}</div>
-                      <div style={{ fontSize: '0.75rem', color: 'var(--text-dim)' }}>
-                        {app.applicant_person_id?.gender}, {app.applicant_person_id?.occupation || 'Citizen'}
-                      </div>
-                    </td>
-                    <td>
-                      <div style={{ fontWeight: 600 }}>{app.scheme_id?.name}</div>
-                      <div style={{ fontSize: '0.75rem', color: 'var(--text-dim)' }}>{app.scheme_id?.department}</div>
-                    </td>
-                    <td>
-                      <StatusBadge status={app.status} />
-                    </td>
-                    <td>
-                      <button
-                        id={`btn-review-${app._id}`}
-                        onClick={() => handleOpenReview(app)}
-                        className="btn btn-secondary"
-                        style={{ padding: '6px 12px', fontSize: '0.8rem' }}
-                      >
-                        <Eye size={13} /> Review / Action
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
-
-      {/* Review Modal */}
-      {selectedApp && (
-        <div className="modal-overlay" id="review-application-modal">
-          <div className="modal-content animate-fade-in">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '18px' }}>
-              <h3 style={{ fontSize: '1.25rem' }}>
-                Review Application APP-{selectedApp._id.slice(-5).toUpperCase()}
-              </h3>
-              <button onClick={() => setSelectedApp(null)} style={{ background: 'none', border: 'none', color: 'var(--text-dim)', fontSize: '1.4rem', cursor: 'pointer' }}>×</button>
+      {/* Officer Review Modal Dialog */}
+      {reviewingApp && (
+        <Modal
+          isOpen={Boolean(reviewingApp)}
+          onClose={() => setReviewingApp(null)}
+          title={`Review Application — ${formatAppId(reviewingApp._id)}`}
+          subtitle={reviewingApp.scheme_id?.name}
+          maxWidth="max-w-lg"
+        >
+          <form onSubmit={handleReviewSubmit} className="space-y-4 text-xs">
+            <div className="p-3 bg-slate-50 border border-gov-border rounded space-y-1">
+              <div className="flex justify-between">
+                <span className="font-bold text-gov-navy">Applicant:</span>
+                <span>{reviewingApp.applicant_person_id?.name}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="font-bold text-gov-navy">Family ID:</span>
+                <span className="font-mono">{reviewingApp.family_id?.family_id}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="font-bold text-gov-navy">Location:</span>
+                <span>{reviewingApp.family_id?.taluka}, {reviewingApp.family_id?.district}</span>
+              </div>
             </div>
 
-            <div style={{ background: 'rgba(255,255,255,0.03)', padding: '14px', borderRadius: '8px', border: '1px solid var(--border-subtle)', marginBottom: '20px', fontSize: '0.875rem' }}>
-              <div><strong>Scheme:</strong> {selectedApp.scheme_id?.name}</div>
-              <div><strong>Beneficiary:</strong> {selectedApp.applicant_person_id?.name}</div>
-              <div><strong>Family ID:</strong> {selectedApp.family_id?.family_id} ({selectedApp.family_id?.district})</div>
-            </div>
-
-            <form onSubmit={handleSaveReview}>
-              <div style={{ marginBottom: '16px' }}>
-                <label className="label-text">Select Decision Status</label>
-                <select
-                  id="select-decision-status"
-                  className="input-field"
-                  value={newStatus}
-                  onChange={(e) => setNewStatus(e.target.value)}
+            <div>
+              <label className="block text-xs font-bold text-gov-navy uppercase tracking-wider mb-1.5">
+                Official Determination / Decision <span className="text-red-600">*</span>
+              </label>
+              <div className="grid grid-cols-3 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setReviewDecision('APPROVED')}
+                  className={`p-2.5 rounded border text-xs font-bold transition-colors ${
+                    reviewDecision === 'APPROVED'
+                      ? 'bg-green-700 text-white border-green-800'
+                      : 'bg-white border-gov-border text-gov-text hover:bg-slate-50'
+                  }`}
                 >
-                  <option value="UNDER_REVIEW">UNDER REVIEW</option>
-                  <option value="APPROVED">APPROVED ✓</option>
-                  <option value="REJECTED">REJECTED</option>
-                </select>
-              </div>
-
-              <div style={{ marginBottom: '24px' }}>
-                <label className="label-text">Officer Remarks</label>
-                <textarea
-                  id="input-officer-remarks"
-                  className="input-field"
-                  rows="3"
-                  value={remarks}
-                  onChange={(e) => setRemarks(e.target.value)}
-                  placeholder="e.g. Verified by District Officer. Land records and family income verified."
-                  required
-                />
-              </div>
-
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
-                <button type="button" onClick={() => setSelectedApp(null)} className="btn btn-secondary">Cancel</button>
-                <button type="submit" id="btn-save-decision" disabled={updating} className="btn btn-primary">
-                  {updating ? 'Saving...' : 'Confirm Decision'}
+                  Approve (મંજૂર)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setReviewDecision('UNDER_REVIEW')}
+                  className={`p-2.5 rounded border text-xs font-bold transition-colors ${
+                    reviewDecision === 'UNDER_REVIEW'
+                      ? 'bg-amber-600 text-white border-amber-700'
+                      : 'bg-white border-gov-border text-gov-text hover:bg-slate-50'
+                  }`}
+                >
+                  Under Review
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setReviewDecision('REJECTED')}
+                  className={`p-2.5 rounded border text-xs font-bold transition-colors ${
+                    reviewDecision === 'REJECTED'
+                      ? 'bg-red-700 text-white border-red-800'
+                      : 'bg-white border-gov-border text-gov-text hover:bg-slate-50'
+                  }`}
+                >
+                  Reject (નામંજૂર)
                 </button>
               </div>
-            </form>
-          </div>
-        </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-gov-navy uppercase tracking-wider mb-1.5">
+                Officer Remarks / Feedback to Citizen
+              </label>
+              <textarea
+                rows={3}
+                required
+                value={remarks}
+                onChange={(e) => setRemarks(e.target.value)}
+                placeholder="State basis of approval or grounds for rejection (e.g. Income certificate verified)..."
+                className="w-full text-xs rounded border border-gov-border p-2.5 bg-white text-gov-text focus-visible:ring-2 focus-visible:ring-gov-navy outline-none"
+              />
+            </div>
+
+            <div className="pt-3 border-t border-gov-border flex justify-end gap-3">
+              <Button variant="secondary" size="sm" onClick={() => setReviewingApp(null)}>
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                variant="primary"
+                size="sm"
+                loading={submittingReview}
+              >
+                Submit Official Decision
+              </Button>
+            </div>
+          </form>
+        </Modal>
       )}
-    </div>
+    </PortalLayout>
   );
 };
 
