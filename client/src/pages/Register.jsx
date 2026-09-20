@@ -57,7 +57,14 @@ const Register = () => {
     setLoading(true);
 
     try {
-      const res = await registerUser(data);
+      const payload = {
+        ...data,
+        email: String(data.email || '').trim().toLowerCase(),
+        mobile: String(data.mobile || '').trim(),
+        aadhar_last_4: String(data.aadhar_last_4 || '').trim()
+      };
+
+      const res = await registerUser(payload);
       showToast({
         type: 'success',
         title: 'Registration Successful',
@@ -71,7 +78,7 @@ const Register = () => {
       }
     } catch (err) {
       console.error('Registration error:', err);
-      const msg = err.response?.data?.message || 'Registration failed. Please check inputs.';
+      const msg = err.response?.data?.message || 'Unable to reach the server. Please try again.';
       setServerError(msg);
       showToast({
         type: 'error',
